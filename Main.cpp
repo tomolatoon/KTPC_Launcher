@@ -11,6 +11,12 @@
 
 namespace tomolatoon
 {
+	namespace
+	{
+		template <class... Args>
+		void ExpansionDummy(Args...);
+	}
+
 	double Sign(double d)
 	{
 		return (d > 0) - (d < 0);
@@ -62,6 +68,30 @@ namespace tomolatoon
 			return this->add(std::make_shared<LambdaWrapper>(std::move(lam)));
 		}
 
+		template <class Head1, class Head2, class... Args>
+		void addAsArgs(Head1&& head1, Head2&& head2, Args&&... args)
+		{
+			add(std::forward<Head1>(head1));
+			add(std::forward<Head2>(head2));
+			addAsArgs(std::forward<Args>(args)...);
+		}
+
+		template <class Head1>
+		void addAsArgs(Head1&& head)
+		{
+			add(std::forward<Head1>(head));
+		}
+
+		IDrawer& get(int32 i)
+		{
+			return *drawables.at(i).get();
+		}
+
+		size_t size()
+		{
+			return drawables.size();
+		}
+
 		enum State : int16
 		{
 			//ButtonHandled, [[todo]]
@@ -72,7 +102,7 @@ namespace tomolatoon
 			Stopping        = 0b0010'0000, // 完全に止まった時
 		};
 
-		void draw()
+		int32 draw()
 		{
 			// [0, drawables.size() * height) に丸める
 			auto rounding = [&](auto fp) {
@@ -209,6 +239,7 @@ namespace tomolatoon
 					}
 				}
 			}
+			return selected;
 		}
 
 	private:
@@ -240,9 +271,10 @@ void Main()
 
 	tomolatoon::ListDrawer drawer;
 
-	drawer.add([](double per) { Iframe::Rect().draw(Palette::Blue); });
-	drawer.add([](double per) { Iframe::Rect().draw(Palette::Green); });
-	drawer.add([](double per) { Iframe::Rect().draw(Palette::Yellow); });
+	drawer.addAsArgs(
+		[](double per) { Iframe::Rect().draw(Palette::Blue); },
+		[](double per) { Iframe::Rect().draw(Palette::Green); },
+		[](double per) { Iframe::Rect().draw(Palette::Yellow); });
 
 	while (System::Update())
 	{
