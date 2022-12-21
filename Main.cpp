@@ -7,16 +7,11 @@
 #include "Viewport.hpp"
 #include "CurryGenerator.hpp"
 #include "ExpressionFunctor.hpp"
+#include "LerpTransition.hpp"
 #include "Units.hpp"
 
 namespace tomolatoon
 {
-	namespace
-	{
-		template <class... Args>
-		void ExpansionDummy(Args...);
-	}
-
 	double Sign(double d)
 	{
 		return (d > 0) - (d < 0);
@@ -38,8 +33,8 @@ namespace tomolatoon
 
 		size_t add(std::shared_ptr<IDrawer>&& drawer)
 		{
-			drawables.push_back(drawer);
-			return drawables.size();
+			m_drawables.push_back(drawer);
+			return m_drawables.size();
 		}
 
 		template <std::derived_from<IDrawer> Drawable, class... Args>
@@ -84,12 +79,12 @@ namespace tomolatoon
 
 		IDrawer& get(int32 i)
 		{
-			return *drawables.at(i).get();
+			return *m_drawables.at(i).get();
 		}
 
 		size_t size()
 		{
-			return drawables.size();
+			return m_drawables.size();
 		}
 
 		enum State : int16
@@ -104,153 +99,145 @@ namespace tomolatoon
 
 		int32 draw()
 		{
-			// [0, drawables.size() * height) に丸める
+			// [0, m_drawables.size() * m_height) に丸める
 			auto rounding = [&](auto fp) {
 				if (fp < 0.0)
 				{
-					return drawables.size() * height + Fmod(fp, drawables.size() * height);
+					return m_drawables.size() * m_height + Fmod(fp, m_drawables.size() * m_height);
 				}
 				else
 				{
-					return Fmod(fp, drawables.size() * height);
+					return Fmod(fp, m_drawables.size() * m_height);
 				}
 			};
 
 			// state 更新
 			if (Iframe::Rect().mouseOver() && !MouseL.down() && (MouseL.pressed() || MouseL.up()))
 			{
-				state = State::MouseHandled;
+				m_state = State::MouseHandled;
 			}
 			else
 			{
-				if (Abs(vel) < 50)
+				if (Abs(m_vel) < 100)
 				{
-					if (toStopping.isOne())
+					if (m_toStopping.isFinish())
 					{
-						state = State::Stopping;
+						m_state = State::Stopping;
 					}
 					else
 					{
-						if (state != State::ToStoppingFirst && state != State::ToStopping)
+						if (m_state != State::ToStoppingFirst && m_state != State::ToStopping)
 						{
-							state = State::ToStoppingFirst;
+							m_state = State::ToStoppingFirst;
 						}
 						else
 						{
-							state = State::ToStopping;
+							m_state = State::ToStopping;
 						}
 					}
 				}
 				else
 				{
-					state = State::Coasting;
+					m_state = State::Coasting;
 				}
 			}
 
-			const auto toStoppingLerpCenterY = [&]() {
-				return Math::Lerp(toStoppingStart, toStoppingFinish, EaseOutQuint(toStopping.value()));
-			};
-
 			// 更新
-			switch (state)
+			switch (m_state)
 			{
 				using enum State;
 			case MouseHandled:
 			{
-				vel = Clamp(Cursor::DeltaF().y / Scene::DeltaTime(), -5000.0, 5000.0);
+				m_vel = Clamp(Cursor::DeltaF().y / Scene::DeltaTime(), -5000.0, 5000.0);
 			}
 			break;
 			case Coasting:
 			{
-				vel += rSing(vel) * 4000 * Scene::DeltaTime();
+				m_vel += rSing(m_vel) * 4000 * Scene::DeltaTime();
 			}
 			break;
 			case ToStoppingFirst:
 			{
-				toStoppingStart  = diff;
-				toStoppingFinish = rounding((drawables.size() - 1 - selected) * height + (double)height / 2);
-				vel              = 0;
+				m_toStopping.setRange(m_diff, rounding((m_drawables.size() - 1 - m_selected) * m_height + (double)m_height / 2));
+				m_vel = 0;
 			}
 				[[fallthrough]];
 			case ToStopping:
 			{
-				toStoppingPrev = toStoppingLerpCenterY();
-				toStopping.update(true);
+				m_toStopping.updateByDeltaSec(true);
 			}
 			break;
 			case Stopping:
 				break;
 			}
 
-			if (state & ~(State::ToStoppingFirst | State::ToStopping))
+			if (m_state & ~(State::ToStoppingFirst | State::ToStopping | State::Stopping))
 			{
-				toStoppingStart  = 0.0;
-				toStoppingPrev   = 0.0;
-				toStoppingFinish = 0.0;
-				toStopping.update(false, 1.0);
+				m_toStopping.setRange(0.0, 0.0);
+				m_toStopping.updateByDeltaSec(false, 1.0);
 			}
 
 			// 実際に真ん中に据えるカード分の座標差
-			diff             = rounding(diff + vel * Scene::DeltaTime() + (toStoppingLerpCenterY() - toStoppingPrev));
+			m_diff           = rounding(m_diff + m_vel * Scene::DeltaTime() + m_toStopping.deltaValue(EaseOutQuint));
 			// 中央に存在するカードのインデックス
-			selected         = drawables.size() - 1 - (int32)(diff / height);
+			m_selected       = m_drawables.size() - 1 - (int32)(m_diff / m_height);
 			// startIndex の描画を開始する位置(y座標)
-			double startY    = Iframe::Center().y + diff - height * (drawables.size() - selected);
+			double startY    = Iframe::Center().y + m_diff - m_height * (m_drawables.size() - m_selected);
 			// startIndex の描画位置(Rect)
-			Rect   startRect = RectF{0, startY, (double)Iframe::Width(), height}.asRect();
+			Rect   startRect = RectF{0.0, startY, (double)Iframe::Width(), (double)m_height}.asRect();
 
-			Print << U"vel: {}\ndiff:{}\nselected:{}\ncenterY:{}\ntoStoppingLerpCenterY():{}\ncenterRect:{}\ntoStoppingStart:{}\ntoStoppingPrev:{}\ntoStoppingFinish:{}\n"_fmt(vel, diff, selected, startY, toStoppingLerpCenterY(), startRect, toStoppingStart, toStoppingPrev, toStoppingFinish);
+			Print << U"m_vel: {}\ndiff:{}\nselected:{}\ncenterY:{}\ncenterRect:{}"_fmt(m_vel, m_diff, m_selected, startY, startRect);
 
 			// 描画
 			{
-				// [0, drawables.size()) に丸めながら増減させる
-				const auto inc = [&](int32 index) { return index + 1 >= drawables.size() ? 0 : index + 1; };
-				const auto dec = [&](int32 index) { return index - 1 < 0 ? drawables.size() - 1 : index - 1; };
+				// [0, m_drawables.size()) に丸めながら増減させる
+				const auto inc = [&](int32 index) { return index + 1 >= m_drawables.size() ? 0 : index + 1; };
+				const auto dec = [&](int32 index) { return index - 1 < 0 ? m_drawables.size() - 1 : index - 1; };
 
 				// 中央のカード
 				{
 					ScopedIframe2D iframe(startRect);
-					Iframe::Rect().draw(Palette::Azure);
-					//drawables[selected].get()->draw(EaseOutQuint(toStopping.value()));
+					//Iframe::Rect().draw(Palette::Azure);
+					m_drawables[m_selected].get()->draw(m_toStopping.transition(EaseOutQuint));
 				}
 
 				// 上半分のカードたち
 				{
-					int32 index = dec(selected);
-					Rect  rect  = Rect{startRect.tl().movedBy(0, -height), Iframe::Width(), height};
+					int32 index = dec(m_selected);
+					Rect  rect  = Rect{startRect.tl().movedBy(0, -m_height), Iframe::Width(), m_height};
 
 					// bl は Rect の場合下方向に 1px はみ出していると考えられるので、 0 は含まないでおく
-					for (; rect.bl().y > 0; rect.moveBy(0, -height), index = dec(index))
+					for (; rect.bl().y > 0; rect.moveBy(0, -m_height), index = dec(index))
 					{
 						ScopedIframe2D iframe(rect);
-						drawables[index].get()->draw(EaseOutQuint(toStopping.value()));
+						m_drawables[index].get()->draw(0.0);
 					}
 				}
 
 				// 下半分のカードたち
 				{
-					int32 index = inc(selected);
-					Rect  rect  = Rect{startRect.bl(), Iframe::Width(), height};
+					int32 index = inc(m_selected);
+					Rect  rect  = Rect{startRect.bl(), Iframe::Width(), m_height};
 
-					for (; rect.tl().y < Iframe::Height(); rect.moveBy(0, height), index = inc(index))
+					for (; rect.tl().y < Iframe::Height(); rect.moveBy(0, m_height), index = inc(index))
 					{
 						ScopedIframe2D iframe(rect);
-						drawables[index].get()->draw(EaseOutQuint(toStopping.value()));
+						m_drawables[index].get()->draw(0.0);
 					}
 				}
 			}
-			return selected;
+			return m_selected;
 		}
 
 	private:
-		Transition                      toStopping{0.5s, 0.25s};
-		double                          toStoppingStart = 0, toStoppingPrev = 0, toStoppingFinish = 0;
-		State                           state     = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
-		int32                           selected  = 0;
-		int32                           height    = 100;
-		double                          vel       = 0.0;
-		double                          diff      = -(double)height / 2;
-		Array<std::shared_ptr<IDrawer>> drawables = {};
+		LerpTransition                  m_toStopping{0.5s, 0.25s, 0.0, 0.0};
+		State                           m_state     = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
+		int32                           m_selected  = 0;
+		int32                           m_height    = 110;
+		int32                           m_maxHeight = m_height * 1.5;
+		double                          m_vel       = 0.0;
+		double                          m_diff      = -(double)m_height / 2;
+		Array<std::shared_ptr<IDrawer>> m_drawables = {};
 	};
 
 } // namespace tomolatoon
@@ -281,7 +268,8 @@ void Main()
 		ClearPrint();
 
 		{
-			ScopedIframe2D iframe(RectF(10_sw, 0, 50_sw, 100_sh).asRect());
+			ScopedIframe2D iframe(RectF(10_sw, 0, 40_sw - 1, 100_sh).asRect());
+			Iframe::Rect().draw(Palette::White);
 			drawer.draw();
 		}
 		Line{0, Scene::CenterF().y, Scene::Width(), Scene::CenterF().y}.draw(LineStyle::Default, 1, ColorF{Palette::White, 1});
