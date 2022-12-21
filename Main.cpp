@@ -77,12 +77,12 @@ namespace tomolatoon
 			add(std::forward<Head1>(head));
 		}
 
-		IDrawer& get(int32 i)
+		IDrawer& getDrawer(int32 i)
 		{
 			return *m_drawables.at(i).get();
 		}
 
-		size_t size()
+		size_t getDrawersSize()
 		{
 			return m_drawables.size();
 		}
@@ -96,6 +96,16 @@ namespace tomolatoon
 			ToStopping      = 0b0001'0000, // 止まろうとしてる時
 			Stopping        = 0b0010'0000, // 完全に止まった時
 		};
+
+		State getState() const
+		{
+			return m_state;
+		}
+
+		int32 getSelected() const
+		{
+			return m_selected;
+		}
 
 		int32 draw()
 		{
@@ -120,7 +130,7 @@ namespace tomolatoon
 			{
 				if (Abs(m_vel) < 100)
 				{
-					if (m_toStopping.isFinish())
+					if (m_toStoppingDiff.isFinish())
 					{
 						m_state = State::Stopping;
 					}
@@ -158,13 +168,14 @@ namespace tomolatoon
 			break;
 			case ToStoppingFirst:
 			{
-				m_toStopping.setRange(m_diff, rounding((m_drawables.size() - 1 - m_selected) * m_height + (double)m_height / 2));
+				m_toStoppingDiff.setRange(m_diff, rounding((m_drawables.size() - 1 - m_selected) * m_height + (double)m_height / 2));
 				m_vel = 0;
 			}
 				[[fallthrough]];
 			case ToStopping:
 			{
-				m_toStopping.updateByDeltaSec(true);
+				m_toStoppingDiff.updateByDeltaSec(true);
+				m_toStoppingHeight.updateByDeltaSec(true);
 			}
 			break;
 			case Stopping:
@@ -173,18 +184,19 @@ namespace tomolatoon
 
 			if (m_state & ~(State::ToStoppingFirst | State::ToStopping | State::Stopping))
 			{
-				m_toStopping.setRange(0.0, 0.0);
-				m_toStopping.updateByDeltaSec(false, 1.0);
+				m_toStoppingDiff.setRange(0.0, 0.0);
+				m_toStoppingDiff.updateByDeltaSec(false, 1.0);
+				m_toStoppingHeight.updateByDeltaSec(false);
 			}
 
 			// 実際に真ん中に据えるカード分の座標差
-			m_diff           = rounding(m_diff + m_vel * Scene::DeltaTime() + m_toStopping.deltaValue(EaseOutQuint));
+			m_diff           = rounding(m_diff + m_vel * Scene::DeltaTime() + m_toStoppingDiff.deltaValue(EaseOutQuint));
 			// 中央に存在するカードのインデックス
 			m_selected       = m_drawables.size() - 1 - (int32)(m_diff / m_height);
 			// startIndex の描画を開始する位置(y座標)
-			double startY    = Iframe::Center().y + m_diff - m_height * (m_drawables.size() - m_selected);
+			double startY    = Iframe::Center().y + m_diff - m_height * (m_drawables.size() - m_selected) - (m_toStoppingHeight.value() - m_height) / 2;
 			// startIndex の描画位置(Rect)
-			Rect   startRect = RectF{0.0, startY, (double)Iframe::Width(), (double)m_height}.asRect();
+			Rect   startRect = RectF{0.0, startY, (double)Iframe::Width(), m_toStoppingHeight.value()}.asRect();
 
 			Print << U"m_vel: {}\ndiff:{}\nselected:{}\ncenterY:{}\ncenterRect:{}"_fmt(m_vel, m_diff, m_selected, startY, startRect);
 
@@ -198,7 +210,7 @@ namespace tomolatoon
 				{
 					ScopedIframe2D iframe(startRect);
 					//Iframe::Rect().draw(Palette::Azure);
-					m_drawables[m_selected].get()->draw(m_toStopping.transition(EaseOutQuint));
+					m_drawables[m_selected].get()->draw(m_toStoppingDiff.transition(EaseOutQuint));
 				}
 
 				// 上半分のカードたち
@@ -230,13 +242,14 @@ namespace tomolatoon
 		}
 
 	private:
-		LerpTransition                  m_toStopping{0.5s, 0.25s, 0.0, 0.0};
 		State                           m_state     = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
 		int32                           m_selected  = 0;
-		int32                           m_height    = 110;
-		int32                           m_maxHeight = m_height * 1.5;
+		int32                           m_height    = 100;
+		int32                           m_maxHeight = m_height * 1.25;
 		double                          m_vel       = 0.0;
 		double                          m_diff      = -(double)m_height / 2;
+		LerpTransition                  m_toStoppingDiff{0.5s, 0.25s, 0.0, 0.0};
+		LerpTransition                  m_toStoppingHeight{0.1s, 0.1s, m_height, m_maxHeight};
 		Array<std::shared_ptr<IDrawer>> m_drawables = {};
 	};
 
