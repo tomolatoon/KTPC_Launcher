@@ -315,6 +315,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ExpressionFunctor.hpp" />
+    <ClInclude Include="LerpTransition.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Units.hpp" />
     <ClInclude Include="Viewport.hpp" />

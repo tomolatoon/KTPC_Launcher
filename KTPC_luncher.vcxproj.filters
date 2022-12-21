@@ -788,5 +788,8 @@
     <ClInclude Include="Units.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LerpTransition.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
