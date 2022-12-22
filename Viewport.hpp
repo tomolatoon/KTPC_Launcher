@@ -78,12 +78,12 @@ namespace tomolatoon
 
 		static Point Center()
 		{
-			return RectAtScene().center().asPoint();
+			return Rect().center().asPoint();
 		}
 
 		static Vec2 CenterF()
 		{
-			return RectAtScene().center();
+			return Rect().center();
 		}
 
 		static s3d::Rect Rect()

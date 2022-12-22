@@ -3,6 +3,7 @@
 #include <concepts>
 #include <ranges>
 #include <format>
+#include <filesystem>
 
 #include "Viewport.hpp"
 #include "CurryGenerator.hpp"
@@ -194,7 +195,7 @@ namespace tomolatoon
 			// 中央に存在するカードのインデックス
 			m_selected       = m_drawables.size() - 1 - (int32)(m_diff / m_height);
 			// startIndex の描画を開始する位置(y座標)
-			double startY    = Iframe::Center().y + m_diff - m_height * (m_drawables.size() - m_selected) - (m_toStoppingHeight.value() - m_height) / 2;
+			double startY    = m_center + m_diff - m_height * (m_drawables.size() - m_selected) - (m_toStoppingHeight.value() - m_height) / 2;
 			// startIndex の描画位置(Rect)
 			Rect   startRect = RectF{0.0, startY, (double)Iframe::Width(), m_toStoppingHeight.value()}.asRect();
 
@@ -218,7 +219,7 @@ namespace tomolatoon
 					int32 index = dec(m_selected);
 					Rect  rect  = Rect{startRect.tl().movedBy(0, -m_height), Iframe::Width(), m_height};
 
-					// bl は Rect の場合下方向に 1px はみ出していると考えられるので、 0 は含まないでおく
+					// bl は実際の領域よりも下方向に 1px はみ出していると考えられるので 0 は含まないでおく
 					for (; rect.bl().y > 0; rect.moveBy(0, -m_height), index = dec(index))
 					{
 						ScopedIframe2D iframe(rect);
@@ -244,8 +245,9 @@ namespace tomolatoon
 	private:
 		State                           m_state     = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
 		int32                           m_selected  = 0;
-		int32                           m_height    = 100;
-		int32                           m_maxHeight = m_height * 1.25;
+		int32                           m_height    = 110;
+		int32                           m_maxHeight = m_height * 1.3;
+		int32                           m_center    = Scene::Center().y;
 		double                          m_vel       = 0.0;
 		double                          m_diff      = -(double)m_height / 2;
 		LerpTransition                  m_toStoppingDiff{0.5s, 0.25s, 0.0, 0.0};
@@ -257,10 +259,22 @@ namespace tomolatoon
 
 void Main()
 {
-	Effect effect;
+	JSON settings;
+
+	const Array<String>& args = System::GetCommandLineArgs();
+
+	if (args.size() > 1)
+	{
+		std::filesystem::path jsonPath = args[1].toUTF32();
+
+		if (jsonPath.extension() == U".json")
+		{
+			settings = settings.Load(jsonPath.u32string());
+		}
+	}
 
 	//Window::SetStyle(WindowStyle::Sizable);
-	Window::Resize(1280, 720, Centering::Yes);
+	Window::Resize(1755, 810, Centering::Yes);
 
 	using namespace tomolatoon::Units;
 	using namespace std::placeholders;
@@ -278,13 +292,24 @@ void Main()
 
 	while (System::Update())
 	{
+		const auto sliderStart = 17.25_sw;
+
 		ClearPrint();
 
+		// List
 		{
-			ScopedIframe2D iframe(RectF(10_sw, 0, 40_sw - 1, 100_sh).asRect());
-			Iframe::Rect().draw(Palette::White);
+			ScopedIframe2D iframe(RectF(sliderStart, 0, 39_sw, 90_sh).asRect());
 			drawer.draw();
 		}
-		Line{0, Scene::CenterF().y, Scene::Width(), Scene::CenterF().y}.draw(LineStyle::Default, 1, ColorF{Palette::White, 1});
+		// 画像
+		{
+			RectF{59.5_sw, 15.5_sh, 31.5_sw}.asRect().draw(Palette::Aqua);
+		}
+		// その他
+		{
+			Line{0, 50_sh, Scene::Width(), 50_sh}.draw(LineStyle::Default, 1, ColorF{Palette::White, 1});
+			RectF{sliderStart, 90_sh, 85_sw, 10_sh}.asRect().draw(Palette::White);
+		}
+		drawer.getDrawer(drawer.getSelected());
 	}
 }
