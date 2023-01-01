@@ -195,7 +195,7 @@ namespace tomolatoon
 			// 中央に存在するカードのインデックス
 			m_selected       = m_drawables.size() - 1 - (int32)(m_diff / m_height);
 			// startIndex の描画を開始する位置(y座標)
-			double startY    = m_center + m_diff - m_height * (m_drawables.size() - m_selected) - (m_toStoppingHeight.value() - m_height) / 2;
+			double startY    = m_center() + m_diff - m_height * (m_drawables.size() - m_selected) - (m_toStoppingHeight.value() - m_height) / 2;
 			// startIndex の描画位置(Rect)
 			Rect   startRect = RectF{0.0, startY, (double)Iframe::Width(), m_toStoppingHeight.value()}.asRect();
 
@@ -239,27 +239,31 @@ namespace tomolatoon
 					}
 				}
 			}
+
 			return m_selected;
 		}
 
 	private:
+		using Int32Func = int32 (*)();
+
 		State                           m_state     = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
 		int32                           m_selected  = 0;
 		int32                           m_height    = 110;
 		int32                           m_maxHeight = m_height * 1.3;
-		int32                           m_center    = Scene::Center().y;
+		Int32Func                       m_center    = []() { return Scene::Center().y; }; // 関数にするか普通の値にするかは検討
 		double                          m_vel       = 0.0;
 		double                          m_diff      = -(double)m_height / 2;
 		LerpTransition                  m_toStoppingDiff{0.5s, 0.25s, 0.0, 0.0};
 		LerpTransition                  m_toStoppingHeight{0.1s, 0.1s, m_height, m_maxHeight};
 		Array<std::shared_ptr<IDrawer>> m_drawables = {};
 	};
-
 } // namespace tomolatoon
 
 void Main()
 {
-	JSON settings;
+	JSON                   settings;
+	tomolatoon::ListDrawer drawer;
+	Array<Texture>         icons;
 
 	const Array<String>& args = System::GetCommandLineArgs();
 
@@ -270,6 +274,13 @@ void Main()
 		if (jsonPath.extension() == U".json")
 		{
 			settings = settings.Load(jsonPath.u32string());
+		}
+
+		for (const auto& games = settings[U"games"]; auto&& game : games.arrayView())
+		{
+			std::filesystem::path iconPath = (jsonPath.parent_path().u32string() + game[U"icon"].get<String>().toUTF32());
+
+			icons.push_back(Texture{iconPath.u32string()});
 		}
 	}
 
@@ -283,12 +294,10 @@ void Main()
 
 	//const auto rect = To<Rect>::With(std::bind(sw, _2), _1, 40_swf, 100_shf / 7 | Ceilf);
 
-	tomolatoon::ListDrawer drawer;
-
 	drawer.addAsArgs(
-		[](double per) { Iframe::Rect().draw(Palette::Blue); },
-		[](double per) { Iframe::Rect().draw(Palette::Green); },
-		[](double per) { Iframe::Rect().draw(Palette::Yellow); });
+		[](double per) { Iframe::Rect().draw(Color(63, 203, 187)); },
+		[](double per) { Iframe::Rect().draw(Color(255, 204, 17)); },
+		[](double per) { Iframe::Rect().draw(Color(221, 68, 68)); });
 
 	while (System::Update())
 	{
@@ -303,7 +312,8 @@ void Main()
 		}
 		// 画像
 		{
-			RectF{59.5_sw, 15.5_sh, 31.5_sw}.asRect().draw(Palette::Aqua);
+			icons[drawer.getSelected()].resized(31.5_sw).draw(59.5_sw, 15.5_sh);
+			//RectF{59.5_sw, 15.5_sh, 31.5_sw}.asRect().draw(Palette::Aqua);
 		}
 		// その他
 		{

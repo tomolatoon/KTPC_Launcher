@@ -4,9 +4,28 @@
       "name": "",
       "author": "",
       "exe": "",
-      "icon": "",
+      "icon": "./TestResources/icon/1.png",
       "description": "",
-      "year": []
+      "year": [],
+      "tag": []
+    },
+    {
+      "name": "",
+      "author": "",
+      "exe": "",
+      "icon": "./TestResources/icon/2.png",
+      "description": "",
+      "year": [],
+      "tag": []
+    },
+    {
+      "name": "",
+      "author": "",
+      "exe": "",
+      "icon": "./TestResources/icon/3.png",
+      "description": "",
+      "year": [],
+      "tag": []
     }
   ]
 }
