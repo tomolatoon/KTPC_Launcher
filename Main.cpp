@@ -262,29 +262,54 @@ namespace tomolatoon
 void Main()
 {
 	JSON                   settings;
+	JSONSchema             schema;
 	tomolatoon::ListDrawer drawer;
 	Array<Texture>         icons;
 
-	const Array<String>& args = System::GetCommandLineArgs();
-
-	if (args.size() > 1)
 	{
+		if ((schema = JSONSchema::Load(U"./data.schema.json")).isEmpty())
+		{
+			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"規定の JSON Schema ファイルが実行ファイルと同じディレクトリに data.schema.json という名前で配置されていませんでした。");
+			return;
+		}
+
+		const Array<String>& args = System::GetCommandLineArgs();
+
+		if (args.size() <= 1)
+		{
+			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"ゲームについてのデータを提供して下さい。データは JSON 形式で、拡張子は .json とし、規定の JSON Schema に従う形で作成し、その JSON へのパスをコマンドライン引数に指定してください。");
+			return;
+		}
+
 		std::filesystem::path jsonPath = args[1].toUTF32();
 
 		if (jsonPath.extension() == U".json")
 		{
 			settings = settings.Load(jsonPath.u32string());
 		}
-
-		for (const auto& games = settings[U"games"]; auto&& game : games.arrayView())
+		else
 		{
-			std::filesystem::path iconPath = (jsonPath.parent_path().u32string() + game[U"icon"].get<String>().toUTF32());
-
-			icons.push_back(Texture{iconPath.u32string()});
+			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"コマンドライン引数に値（{}）が渡されましたが、拡張子が JSON ではありませんでした。拡張子は .json とし、規定の JSON Schema に従う形で作成してください。"_fmt(jsonPath.u32string()));
+			return;
 		}
+
+		if (auto&& details = schema.validateWithDetails(settings); details.isError())
+		{
+			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"ファイルパスは正常でしたが、規定の JSON Schema に沿った JSON データではありませんでした。規定の JSON Schema に従う形で作成してください。エラーメッセージは次に示す通りです。\n{}"_fmt(Format(details)));
+			return;
+		}
+		else
+		{
+			for (const auto& games = settings[U"games"]; auto&& [key, game] : games)
+			{
+				std::filesystem::path iconPath = (jsonPath.parent_path().u32string() + game[U"icon"].get<String>().toUTF32());
+
+				icons.push_back(Texture{iconPath.u32string()});
+			}
+		}
+		
 	}
 
-	//Window::SetStyle(WindowStyle::Sizable);
 	Window::Resize(1755, 810, Centering::Yes);
 
 	using namespace tomolatoon::Units;
