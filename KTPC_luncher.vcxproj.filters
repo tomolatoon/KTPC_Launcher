@@ -735,6 +735,9 @@
     <None Include="data.json">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="data.schema.json">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Media Include="App\example\test.mp3">

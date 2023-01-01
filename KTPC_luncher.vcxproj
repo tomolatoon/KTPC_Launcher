@@ -50,8 +50,8 @@
     <IntDir>$(SolutionDir)Intermediate\$(ProjectName)\Debug\Intermediate\</IntDir>
     <TargetName>$(ProjectName)(debug)</TargetName>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)App</LocalDebuggerWorkingDirectory>
-    <IncludePath>$(SIV3D_0_6_5)\include;$(SIV3D_0_6_5)\include\ThirdParty;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SIV3D_0_6_5)\lib\Windows;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\MySiv3D\include;$(SolutionDir)\MySiv3D\include\ThirdParty;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\MySiv3D\lib\Windows;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -296,6 +296,7 @@
     <None Include="App\example\toml\test.toml" />
     <None Include="App\example\zip\zip_test.zip" />
     <None Include="data.json" />
+    <None Include="data.schema.json" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="App\example\shot.mp3" />
