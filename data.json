@@ -1,31 +1,60 @@
 {
   "games": [
     {
-      "name": "",
-      "author": "",
-      "exe": "",
+      "title": "メタ関数だらけのコンパイル時世界",
+      "author": "tomolatoon",
+      "exe": "https://qiita.com/tomolatoon/items/c21fa6a5d86e78e8b772",
       "icon": "./TestResources/icon/1.png",
-      "description": "",
-      "year": [],
-      "tag": []
+      "description": "メタ関数や関数を意図的に呼び出し分けるなどの、テンプレートを使ったコンパイル時のセカイ、特にメタ関数について説明しているものです。",
+      "year": 2021,
+      "tags": [
+        "",
+        ""
+      ],
+      "background": [
+        63,
+        203,
+        187
+      ]
     },
     {
-      "name": "",
-      "author": "",
-      "exe": "",
+      "title": "C++20のイテレータ事情",
+      "author": "tomolatoon",
+      "exe": "https://qiita.com/tomolatoon/items/3e14a3172261230ebe83",
       "icon": "./TestResources/icon/2.png",
-      "description": "",
-      "year": [],
-      "tag": []
+      "description": "C++20 Ranges は結局のところイテレータペアのラッパーでしかなく、実際の処理はイテレータに殆どぶん投げられています。そのイテレータも、C++20になってそこそこ大きな変更が入りました。というわけn番煎じではありますが、この記事ではイテレータの解説をしようと思います。",
+      "year": 2022,
+      "tags": [
+        "C++",
+        "Iterator",
+        "イテレータ",
+        "C++20"
+      ],
+      "background": [
+        255,
+        204,
+        17
+      ]
     },
     {
-      "name": "",
-      "author": "",
-      "exe": "",
+      "title": "Siv3DのイテレータをC++20に対応させようの会",
+      "author": "tomolatoon",
+      "exe": "https://qiita.com/tomolatoon/items/d0666bb008054844b4ce",
       "icon": "./TestResources/icon/3.png",
-      "description": "",
-      "year": [],
-      "tag": []
+      "description": "Siv3DのJSONクラスのイテレータに改良を加えたので、それに関する記事になります。",
+      "year": 2022,
+      "tags": [
+        "C++",
+        "Siv3D",
+        "イテレータ",
+        "OpenSiv3D",
+        "C++20"
+      ],
+      "background": [
+        221,
+        68,
+        68
+      ]
     }
   ]
 }
