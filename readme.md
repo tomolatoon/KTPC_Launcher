@@ -4,6 +4,9 @@
 # How to use
 完成したら書きます。
 
+1. `data.schema.json` を実行ファイルと同じフォルダに置いて下さい。
+2. `Mplus1-XXX.otf` を実行ファイルと同じフォルダに置いて下さい。
+
 # How to build
 OpenSiv3D v0.6.6 + 独自 OpenSiv3D v0.6.7（Experimental）を使用してビルドをします。
 
@@ -12,7 +15,7 @@ OpenSiv3D v0.6.6 + 独自 OpenSiv3D v0.6.7（Experimental）を使用してビ�
    1. [tomolatoon/OpenSiv3D をクローンして json_validation ブランチに切り替える](https://github.com/tomolatoon/OpenSiv3D/tree/json_validation) 
    2. \[Windows\]: ビルドします
    3. \[macOS、Linux\]: ThirdParty/nlohmann 以下のヘッダとソースファイルをプロジェクト（xcode、CMake）に追加してからビルドします
-3. ビルドした OpenSiv3D v0.6.7（Experimental）をこのフォルダを基準として、`./MySiv3D/include/`と`./MySiv3D/lib/`にコピペします
+3. ビルドした OpenSiv3D v0.6.7（Experimental）をこのフォルダを基準として、`./ThirdParty/MySiv3D/include/`と`./ThirdParty/MySiv3D/lib/`にコピペします
 4. これをビルドします
 
 ## See also

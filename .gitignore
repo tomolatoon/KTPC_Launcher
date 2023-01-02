@@ -430,4 +430,5 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-/MySiv3D/**/*
+/ThirdParty/**/*
+/App/*.otf

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "data for KTPC Launcher",
+  "title": "Data for KTPC Launcher",
   "type": "object",
   "properties": {
     "games": {
@@ -8,7 +8,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "name": {
+          "title": {
             "type": "string"
           },
           "author": {
@@ -24,21 +24,29 @@
             "type": "string"
           },
           "year": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "minimum": 1957
-            }
+            "type": "number",
+            "minimum": 1957
           },
-          "tag": {
+          "tags": {
             "type": "array",
             "items": {
               "type": "string"
             }
+          },
+          "background": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "minItems": 3,
+            "maxItems": 3
           }
         },
         "required": [
-          "name",
+          "title",
+          "author",
           "exe",
           "icon",
           "description",
