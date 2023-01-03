@@ -8,9 +8,17 @@
 #include "Units.hpp"
 // #include "CurryGenerator.hpp"
 #include "ListDrawer.hpp"
+#include "GraphemeView.hpp"
 
 void Main()
 {
+	//get_grapheme(U"aμあ👨‍👨‍👦");
+
+	for (auto&& e : U"aμあ👨‍👨‍👦👨‍👨‍👦あ👨‍👨‍👦μ👨‍👨‍👦a"_s | tomolatoon::views::graphme)
+	{
+		Console << U"{:5>}, {}"_fmt(e == U"👨‍👨‍👦"_s, e);
+	}
+
 	struct Game
 	{
 		String        title;
@@ -96,7 +104,7 @@ void Main()
 
 	//const auto rect = To<Rect>::With(std::bind(sw, _2), _1, 40_swf, 100_shf / 7 | Ceilf);
 
-// #define LISTDRAWER_DEBUG
+	// #define LISTDRAWER_DEBUG
 
 #ifdef LISTDRAWER_DEBUG
 #	define LISTDRAWER_VAR_DEFINE double
