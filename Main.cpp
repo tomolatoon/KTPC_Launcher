@@ -12,13 +12,6 @@
 
 void Main()
 {
-	//get_grapheme(U"aμあ👨‍👨‍👦");
-
-	for (auto&& e : U"aμあ👨‍👨‍👦👨‍👨‍👦あ👨‍👨‍👦μ👨‍👨‍👦a"_s | tomolatoon::views::graphme)
-	{
-		Console << U"{:5>}, {}"_fmt(e == U"👨‍👨‍👦"_s, e);
-	}
-
 	struct Game
 	{
 		String        title;
@@ -47,9 +40,11 @@ void Main()
 	tomolatoon::ListDrawer<> drawer;
 	Array<Texture>           icons;
 	Array<Game>              games;
-	Font                     font{
-        System::EnumerateMonitors()[System::GetCurrentMonitorIndex()].fullscreenResolution.y / 15,
-        U"./Mplus1-Black.otf"};
+	const int32              baseFontSize = System::EnumerateMonitors()[System::GetCurrentMonitorIndex()].fullscreenResolution.y / 15;
+	Font                     font         = {baseFontSize, Typeface::Mplus_Black};
+	Font                     emoji        = {baseFontSize, Typeface::ColorEmoji};
+
+	font.addFallback(emoji);
 
 	{
 		if ((schema = JSONSchema::Load(U"./data.schema.json")).isEmpty())
@@ -104,7 +99,7 @@ void Main()
 
 	//const auto rect = To<Rect>::With(std::bind(sw, _2), _1, 40_swf, 100_shf / 7 | Ceilf);
 
-	// #define LISTDRAWER_DEBUG
+#define LISTDRAWER_DEBUG
 
 #ifdef LISTDRAWER_DEBUG
 #	define LISTDRAWER_VAR_DEFINE double
@@ -118,6 +113,30 @@ void Main()
 	LISTDRAWER_VAR_DEFINE titleY            = 4;
 	LISTDRAWER_VAR_DEFINE authorY           = 30;
 	LISTDRAWER_VAR_DEFINE descriptionY      = 57.5;
+	LISTDRAWER_VAR_DEFINE descriptionChars  = 75;
+
+	auto textRegion = [&](const String& s, const double fontSize, const Vec2 firstPos, const double maxX) {
+		Vec2 pos = firstPos;
+		for (Array<String> graphmes = s | tomolatoon::views::graphme
+		                            | std::views::take((int32)(Scene::Time() * 10) % (int32)descriptionChars)
+		                            | std::ranges::to<Array<String>>();
+		     auto&& graphme : graphmes)
+		{
+			DrawableText text   = font(graphme);
+			RectF        region = text.region(fontSize, pos);
+
+			if (pos.x + region.w > maxX)
+			{
+				pos    = Vec2{firstPos.x, pos.y + region.h};
+				region = text.region(fontSize, pos);
+			}
+
+			region.draw(Palette::Coral);
+			text.draw(fontSize, pos);
+
+			pos = region.tr();
+		}
+	};
 
 	drawer.addAsArray(games.map([&](const Game& e) {
 		return [&](double per) {
@@ -128,7 +147,8 @@ void Main()
 			RectF{19_vwf(), 7.5_vhf(), 79.5_vwf(), 50_vhf()}.draw(Palette::Gray);
 			font(e.title).draw(vhf(titleHeight)(), 20_vwf(), vhf(titleY)());
 			font(e.author).draw(vhf(authorHeight)(), 20.5_vwf(), vhf(authorY)());
-			font(e.description).draw(vhf(descriptionHeight)(), 20.5_vwf(), vhf(descriptionY)());
+			textRegion(e.description, vhf(descriptionHeight)(), {20.5_vwf(), vhf(descriptionY)()}, 19_vwf() + 79.5_vwf());
+			//font(e.description).draw(vhf(descriptionHeight)(), 20.5_vwf(), vhf(descriptionY)());
 		};
 	}));
 
@@ -161,6 +181,7 @@ void Main()
 		SimpleGUI::Slider(U"titleY: {:.2f}"_fmt(titleY), titleY, 0, 100, Vec2{0, 300}, 250);
 		SimpleGUI::Slider(U"authorY: {:.2f}"_fmt(authorY), authorY, 0, 100, Vec2{0, 350}, 250);
 		SimpleGUI::Slider(U"descriptionY: {:.2f}"_fmt(descriptionY), descriptionY, 0, 100, Vec2{0, 400}, 250);
+		SimpleGUI::Slider(U"descriptionChars: {:.2f}"_fmt(descriptionChars), descriptionChars, 75, 200, Vec2{0, 450}, 250);
 #endif
 	}
 }

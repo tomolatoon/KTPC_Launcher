@@ -5,11 +5,13 @@
       "author": "tomolatoon",
       "exe": "https://qiita.com/tomolatoon/items/c21fa6a5d86e78e8b772",
       "icon": "./TestResources/icon/1.png",
-      "description": "メタ関数や関数を意図的に呼び出し分けるなどの、テンプレートを使ったコンパイル時のセカイ、特にメタ関数について説明しているものです。",
+      "description": "This article describes the template-based, compile-time world of meta-functions and intentional function call separation, especially meta-functions. (translated by DeepL)",
       "year": 2021,
       "tags": [
-        "",
-        ""
+        "C++",
+        "テンプレートメタプログラミング",
+        "SFINAE",
+        "concept"
       ],
       "background": [
         63,
@@ -41,7 +43,7 @@
       "author": "tomolatoon",
       "exe": "https://qiita.com/tomolatoon/items/d0666bb008054844b4ce",
       "icon": "./TestResources/icon/3.png",
-      "description": "Siv3DのJSONクラスのイテレータに改良を加えたので、それに関する記事になります。",
+      "description": "👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦",
       "year": 2022,
       "tags": [
         "C++",
