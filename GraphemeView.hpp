@@ -25,14 +25,14 @@ namespace tomolatoon
 			iterator& operator=(const iterator&) = delete;
 			iterator& operator=(iterator&&)      = default;
 
-			iterator(View& view)
+			iterator(const View& view)
 				: m_parent(std::addressof(view))
 				, m_it(std::ranges::begin(view))
 			{
 				++(*this);
 			}
 
-			const String& operator*()
+			const String& operator*() const
 			{
 				return m_grapehme;
 			}
@@ -118,21 +118,21 @@ namespace tomolatoon
 			}
 
 		private:
-			View*                         m_parent;
-			std::ranges::iterator_t<View> m_it;
-			bool                          m_isEnd     = false;
-			String                        m_grapehme  = U"";
-			icu::ErrorCode                m_errorCode = {};
-			UText*                        m_utext     = utext_openUChars(NULL, u"", 0, m_errorCode);
-			UBreakIterator*               m_brkit     = ubrk_open(UBRK_CHARACTER, uloc_getDefault(), NULL, 0, m_errorCode);
+			const View*                         m_parent;
+			std::ranges::iterator_t<const View> m_it;
+			bool                                m_isEnd     = false;
+			String                              m_grapehme  = U"";
+			icu::ErrorCode                      m_errorCode = {};
+			UText*                              m_utext     = utext_openUChars(NULL, u"", 0, m_errorCode);
+			UBreakIterator*                     m_brkit     = ubrk_open(UBRK_CHARACTER, uloc_getDefault(), NULL, 0, m_errorCode);
 		};
 
-		iterator begin()
+		iterator begin() const
 		{
 			return iterator{m_view};
 		}
 
-		auto end()
+		auto end() const
 		{
 			return std::default_sentinel;
 		}
