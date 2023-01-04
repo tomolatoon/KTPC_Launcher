@@ -5,10 +5,11 @@
 完成したら書きます。
 
 1. `data.schema.json` を実行ファイルと同じフォルダに置いて下さい。
-2. `Mplus1-XXX.otf` を実行ファイルと同じフォルダに置いて下さい。
+2. ~~`Mplus1-XXX.otf` を実行ファイルと同じフォルダに置いて下さい。~~ Siv3D に同梱されてるの忘れてました。
 
 # How to build
 OpenSiv3D v0.6.6 + 独自 OpenSiv3D v0.6.7（Experimental）を使用してビルドをします。
+現状 MSVC じゃないとコンパイルできないです。（`std::ranges::range_adaptor_closure/std::ranges::to`を使用するため）
 
 1. [OpenSiv3D v0.6.6](https://siv3d.github.io/ja-jp/download/windows/) をインストール
 2. OpenSiv3D v0.6.7（Experimental）をビルド
