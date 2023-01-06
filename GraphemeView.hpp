@@ -78,14 +78,14 @@ namespace tomolatoon
 
 					// ICU 初期化
 					{
-						utext_openUChars(m_utext, u16buffer.c_str(), u16buffer.size(), m_errorCode);
+						utext_openUChars(m_utext.get(), u16buffer.c_str(), u16buffer.size(), m_errorCode);
 
 						if (m_errorCode.isFailure())
 						{
 							throw Error{U"[GraphemeView::Iterator::operator++] {}"_fmt(Unicode::FromUTF8(m_errorCode.errorName()))};
 						}
 
-						ubrk_setUText(m_brkit, m_utext, m_errorCode);
+						ubrk_setUText(m_brkit.get(), m_utext.get(), m_errorCode);
 
 						if (m_errorCode.isFailure())
 						{
@@ -95,7 +95,7 @@ namespace tomolatoon
 
 					// 書記素境界を見つけたら break
 					// ex) u16buffer: ["a", "b"], ubrk_next: 1, u16buffer.size: 2
-					if (ubrk_next(m_brkit) != u16buffer.size())
+					if (ubrk_next(m_brkit.get()) != u16buffer.size())
 					{
 						break;
 					}
@@ -118,13 +118,13 @@ namespace tomolatoon
 			}
 
 		private:
-			const View*                         m_parent;
-			std::ranges::iterator_t<const View> m_it;
-			bool                                m_isEnd     = false;
-			String                              m_grapehme  = U"";
-			icu::ErrorCode                      m_errorCode = {};
-			UText*                              m_utext     = utext_openUChars(NULL, u"", 0, m_errorCode);
-			UBreakIterator*                     m_brkit     = ubrk_open(UBRK_CHARACTER, uloc_getDefault(), NULL, 0, m_errorCode);
+			const View*                                            m_parent;
+			std::ranges::iterator_t<const View>                    m_it;
+			bool                                                   m_isEnd     = false;
+			String                                                 m_grapehme  = U"";
+			icu::ErrorCode                                         m_errorCode = {};
+			std::unique_ptr<UText, decltype(utext_close)*>         m_utext     = {utext_openUChars(NULL, u"", 0, m_errorCode), utext_close};
+			std::unique_ptr<UBreakIterator, decltype(ubrk_close)*> m_brkit     = {ubrk_open(UBRK_CHARACTER, uloc_getDefault(), NULL, 0, m_errorCode), ubrk_close};
 		};
 
 		iterator begin() const
