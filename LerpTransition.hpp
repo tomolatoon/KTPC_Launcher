@@ -14,6 +14,8 @@ namespace tomolatoon
 			, m_start(start)
 			, m_finish(finish)
 			, m_prevTransition(m_transition.value())
+			, m_inTime(inDuration.count())
+			, m_outTime(outDuration.count())
 		{}
 
 		double getStart() const
@@ -84,10 +86,32 @@ namespace tomolatoon
 			return easeFunc(m_transition.value()) - easeFunc(m_prevTransition);
 		}
 
+		double setFinish(double thresholdPercent = 1.0)
+		{
+			if (1.0 - value() <= thresholdPercent)
+			{
+				m_transition.update(true, m_inTime + 1.0);
+			}
+
+			return m_finish;
+		}
+
+		double setStart(double thresholdPercent = 1.0)
+		{
+			if (1.0 - value() <= thresholdPercent)
+			{
+				m_transition.update(false, m_outTime + 1.0);
+			}
+
+			return m_start;
+		}
+
 	private:
 		Transition m_transition;
 		double     m_start;
 		double     m_finish;
 		double     m_prevTransition;
+		double     m_inTime;
+		double     m_outTime;
 	};
 } // namespace tomolatoon
