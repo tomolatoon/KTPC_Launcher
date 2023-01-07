@@ -177,10 +177,10 @@ void Main()
 
 	drawer.addAsArray(games.map([&](const Game& e) {
 		return [&](double per, double stopTime) {
-			Print << U"{}, {}"_fmt(per, stopTime);
+			// Print << U"{}, {}"_fmt(per, stopTime);
 
 			Iframe::Rect().draw(e.background);
-			e.icon.resized(Iframe::Height() * 0.8).drawAt(10_vwf(), Iframe::Center().y);
+			e.icon.resized(Iframe::Height() * 0.8).drawAt(10_vw, Iframe::Center().y);
 
 			{
 				const auto oneLineScroller = [&](const String& s, double fontSize, double x, double y, double width) {
@@ -209,14 +209,13 @@ void Main()
 					}
 				};
 
-				RectF region        = {19_vwf(), 7.5_vhf(), 79.5_vwf(), 50_vhf()};
-				RectF scissorRegion = region.stretched(-1_vwf(), 0);
+				RectF region        = {19_vw, 7.5_vh, 79.5_vw, 50_vh};
+				RectF scissorRegion = region.stretched(-1_vw, 0);
 				region.draw(Palette::Gray);
 
 				ScopedRenderStates2D scissor = tomolatoon::CreateScissorRect(scissorRegion.asRect(), tomolatoon::PositionBasedIframe::Yes);
-				oneLineScroller(e.title, vhf(titleHeight)(), 20_vwf(), vhf(titleY)(), scissorRegion.w);
-				//font(e.title).draw(vhf(titleHeight)(), 20_vwf(), vhf(titleY)());
-				font(e.author).draw(vhf(authorHeight)(), 20.5_vwf(), vhf(authorY)());
+				oneLineScroller(e.title, vh(titleHeight), 20_vw, vh(titleY), scissorRegion.w);
+				oneLineScroller(e.author, vh(authorHeight), 20.5_vw, vh(authorY), scissorRegion.w);
 			}
 
 			const auto textRegion = [&](const String& s, const double fontSize, const Vec2 firstPos, const double maxX) {
@@ -269,11 +268,8 @@ void Main()
 			};
 
 			{
-				textRegion(e.description, vhf(descriptionHeight)(), {20.5_vwf(), vhf(descriptionY)()}, 19_vwf() + 79.5_vwf());
+				textRegion(e.description, vh(descriptionHeight), {20.5_vw, vh(descriptionY)}, 19_vw + 79.5_vw);
 			}
-
-			//font(e.description).draw(vhf(descriptionHeight)(), 20.5_vwf(), vhf(descriptionY)());
-			//font(e.description).draw(vhf(descriptionHeight)(), RectF{20.5_vwf(), vhf(descriptionY)(), 78_vwf(), vhf(90 - descriptionY)()}.stretched(vhf(stretchTop)(), vwf(stretchRight)(), vhf(stretchBottom)(), vwf(stretchLeft)()));
 		};
 	}));
 
