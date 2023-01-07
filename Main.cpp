@@ -10,6 +10,61 @@
 #include "ListDrawer.hpp"
 #include "GraphemeView.hpp"
 
+#include <unicode/uchar.h>
+#include <unicode/brkiter.h>
+
+namespace tomolatoon
+{
+	namespace Unicode
+	{
+		namespace Property
+		{
+			template <class GetType, UProperty PropertyIndex>
+			GetType GetProperty(char32 ch)
+			{
+				return static_cast<GetType>(u_getIntPropertyValue(ch, PropertyIndex));
+			}
+
+			template <class GetType>
+			GetType GetProperty(char32 ch, UProperty propIndex)
+			{
+				return static_cast<GetType>(u_getIntPropertyValue(ch, propIndex));
+			}
+
+			ULineBreak GetLineBreak(char32 ch)
+			{
+				return GetProperty<ULineBreak, UCHAR_LINE_BREAK>(ch);
+			}
+
+			String GetUnicodeName(char32 c)
+			{
+				char           buffer[100];
+				icu::ErrorCode errorCode;
+
+				size_t size = u_charName(c, U_UNICODE_CHAR_NAME, buffer, std::ranges::size(buffer), errorCode);
+
+				return s3d::Unicode::FromUTF8({buffer, size});
+			}
+		} // namespace Property
+
+	} // namespace Unicode
+
+	using PositionBasedIframe = YesNo<struct PositionBasedIframe_tag>;
+
+	auto CreateScissorRect(Rect rect, PositionBasedIframe b = PositionBasedIframe::No)
+	{
+		Rect scissor = b ? rect.movedBy(Iframe::RectAtScene().tl()) : rect;
+
+		Graphics2D::SetScissorRect(scissor);
+
+		RasterizerState rs = RasterizerState::Default2D;
+		rs.scissorEnable   = true;
+
+		return ScopedRenderStates2D{rs};
+	}
+} // namespace tomolatoon
+
+
 void Main()
 {
 	struct Game
@@ -31,7 +86,7 @@ void Main()
 			, description(json[U"description"].get<String>())
 			, year(json[U"year"].get<int32>())
 			, tags([](auto&& e) { Array<String> ret; for (auto&& [key,value] : e) { ret.push_back(value.get<String>()); } return ret; }(json[U"tags"]))
-			, background([](auto&& e) { if (e) { return Color{e[0].get<uint8>(), e[1].get<uint8>(), e[2].get<uint8>()}; } else { return Color{66,66,66}; } }(json[U"background"]))
+			, background([](auto&& e) { if (e) { return Color{e[0].get<uint8>(), e[1].get<uint8>(), e[2].get<uint8>()}; } else { return Color{66,66,66}; } }(json.hasElement(U"background") ? json[U"background"] : JSON::Invalid()))
 		{}
 	};
 
@@ -111,44 +166,114 @@ void Main()
 	LISTDRAWER_VAR_DEFINE authorHeight      = 20;
 	LISTDRAWER_VAR_DEFINE descriptionHeight = 13.5;
 	LISTDRAWER_VAR_DEFINE titleY            = 4;
-	LISTDRAWER_VAR_DEFINE authorY           = 30;
+	LISTDRAWER_VAR_DEFINE authorY           = 31;
 	LISTDRAWER_VAR_DEFINE descriptionY      = 57.5;
 	LISTDRAWER_VAR_DEFINE descriptionChars  = 75;
-
-	auto textRegion = [&](const String& s, const double fontSize, const Vec2 firstPos, const double maxX) {
-		Vec2 pos = firstPos;
-		for (Array<String> graphmes = s | tomolatoon::views::graphme
-		                            | std::views::take((int32)(Scene::Time() * 10) % (int32)descriptionChars)
-		                            | std::ranges::to<Array<String>>();
-		     auto&& graphme : graphmes)
-		{
-			DrawableText text   = font(graphme);
-			RectF        region = text.region(fontSize, pos);
-
-			if (pos.x + region.w > maxX)
-			{
-				pos    = Vec2{firstPos.x, pos.y + region.h};
-				region = text.region(fontSize, pos);
-			}
-
-			region.draw(Palette::Coral);
-			text.draw(fontSize, pos);
-
-			pos = region.tr();
-		}
-	};
+	LISTDRAWER_VAR_DEFINE stretchTop        = 0;
+	LISTDRAWER_VAR_DEFINE stretchRight      = 0;
+	LISTDRAWER_VAR_DEFINE stretchBottom     = 0;
+	LISTDRAWER_VAR_DEFINE stretchLeft       = 0;
+	LISTDRAWER_VAR_DEFINE scrollPerS        = 5;
 
 	drawer.addAsArray(games.map([&](const Game& e) {
-		return [&](double per) {
-			Print << U"{}, {}"_fmt(per, 40_vhf());
+		return [&](double per, double stopTime) {
+			Print << U"{}, {}"_fmt(per, stopTime);
+
 			Iframe::Rect().draw(e.background);
 			e.icon.resized(Iframe::Height() * 0.8).drawAt(10_vwf(), Iframe::Center().y);
 
-			RectF{19_vwf(), 7.5_vhf(), 79.5_vwf(), 50_vhf()}.draw(Palette::Gray);
-			font(e.title).draw(vhf(titleHeight)(), 20_vwf(), vhf(titleY)());
-			font(e.author).draw(vhf(authorHeight)(), 20.5_vwf(), vhf(authorY)());
-			textRegion(e.description, vhf(descriptionHeight)(), {20.5_vwf(), vhf(descriptionY)()}, 19_vwf() + 79.5_vwf());
+			{
+				const auto oneLineScroller = [&](const String& s, double fontSize, double x, double y, double width) {
+					if (per == 1.0)
+					{
+						DrawableText text   = font(s);
+						RectF        region = text.region(fontSize, x, y);
+
+						if (region.w <= width)
+						{
+							text.draw(fontSize, x, y);
+						}
+						else
+						{
+							const double scrollVel           = width / scrollPerS;
+							const double halfLoopTime        = region.w / scrollVel;
+							const double per                 = (Fmod(stopTime + halfLoopTime, halfLoopTime * 2) - halfLoopTime) / halfLoopTime;
+							const double addtionalHiddenTime = 1.0;
+							const double baseDiff            = per * (per >= 0.0 ? region.w : width + scrollVel * addtionalHiddenTime);
+							text.draw(fontSize, x - baseDiff, y);
+						}
+					}
+					else
+					{
+						font(s).draw(fontSize, x, y);
+					}
+				};
+
+				RectF region        = {19_vwf(), 7.5_vhf(), 79.5_vwf(), 50_vhf()};
+				RectF scissorRegion = region.stretched(-1_vwf(), 0);
+				region.draw(Palette::Gray);
+
+				ScopedRenderStates2D scissor = tomolatoon::CreateScissorRect(scissorRegion.asRect(), tomolatoon::PositionBasedIframe::Yes);
+				oneLineScroller(e.title, vhf(titleHeight)(), 20_vwf(), vhf(titleY)(), scissorRegion.w);
+				//font(e.title).draw(vhf(titleHeight)(), 20_vwf(), vhf(titleY)());
+				font(e.author).draw(vhf(authorHeight)(), 20.5_vwf(), vhf(authorY)());
+			}
+
+			const auto textRegion = [&](const String& s, const double fontSize, const Vec2 firstPos, const double maxX) {
+				int32 break_    = 0;
+				Vec2  pos       = firstPos;
+				auto  graphemes = s | tomolatoon::views::graphme;
+				auto  end       = std::ranges::end(graphemes);
+				for (auto it = std::ranges::begin(graphemes); it != end; ++it)
+				{
+					const String& grapheme = *it;
+
+					DrawableText text   = font(grapheme);
+					RectF        region = text.region(fontSize, pos);
+
+					const auto draw = [&]() {
+						//region.draw(Palette::Coral);
+						text.draw(fontSize, pos);
+
+						pos = region.tr();
+					};
+
+					const auto isPreventBreak = [](const String& s) {
+						return s == U"、" || s == U"。";
+					};
+
+					if (pos.x + region.w > maxX)
+					{
+						if (isPreventBreak(grapheme))
+						{
+							draw();
+						}
+						else
+						{
+							pos    = Vec2{firstPos.x, pos.y + region.h};
+							region = text.region(fontSize, pos);
+
+							if (++break_ == 2)
+							{
+								break;
+							}
+
+							draw();
+						}
+					}
+					else
+					{
+						draw();
+					}
+				}
+			};
+
+			{
+				textRegion(e.description, vhf(descriptionHeight)(), {20.5_vwf(), vhf(descriptionY)()}, 19_vwf() + 79.5_vwf());
+			}
+
 			//font(e.description).draw(vhf(descriptionHeight)(), 20.5_vwf(), vhf(descriptionY)());
+			//font(e.description).draw(vhf(descriptionHeight)(), RectF{20.5_vwf(), vhf(descriptionY)(), 78_vwf(), vhf(90 - descriptionY)()}.stretched(vhf(stretchTop)(), vwf(stretchRight)(), vhf(stretchBottom)(), vwf(stretchLeft)()));
 		};
 	}));
 
@@ -161,7 +286,8 @@ void Main()
 		// List
 		{
 			ScopedIframe2D iframe(RectF(sliderStart, 0, 44_sw, 100_sh).asRect());
-			drawer.draw(RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver());
+			drawer.update(RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver());
+			drawer.draw();
 		}
 		// 画像
 		{
@@ -175,13 +301,24 @@ void Main()
 		drawer.getDrawer(drawer.getSelected());
 
 #ifdef LISTDRAWER_DEBUG
-		SimpleGUI::Slider(U"titleHeight: {:.2f}"_fmt(titleHeight), titleHeight, 10, 50, Vec2{0, 150}, 250);
-		SimpleGUI::Slider(U"authorHeight: {:.2f}"_fmt(authorHeight), authorHeight, 10, 50, Vec2{0, 200}, 250);
-		SimpleGUI::Slider(U"descriptionHeight: {:.2f}"_fmt(descriptionHeight), descriptionHeight, 0, 100, Vec2{0, 250}, 250);
-		SimpleGUI::Slider(U"titleY: {:.2f}"_fmt(titleY), titleY, 0, 100, Vec2{0, 300}, 250);
-		SimpleGUI::Slider(U"authorY: {:.2f}"_fmt(authorY), authorY, 0, 100, Vec2{0, 350}, 250);
-		SimpleGUI::Slider(U"descriptionY: {:.2f}"_fmt(descriptionY), descriptionY, 0, 100, Vec2{0, 400}, 250);
-		SimpleGUI::Slider(U"descriptionChars: {:.2f}"_fmt(descriptionChars), descriptionChars, 75, 200, Vec2{0, 450}, 250);
+#	define EXPAND(macro)                macro()
+#	define STRINGIZE(s)                 #s
+#	define CAT(a, b)                    a##b
+#	define SLIDER(name, min, max, ybeg) SimpleGUI::Slider(U"{}: {:.2f})"_fmt(CAT(U, #name), name), name, min, max, Vec2{0, ybeg * 50}, 250);
+
+		int32 i = 2;
+		SLIDER(titleHeight, 10, 50, i++);
+		SLIDER(authorHeight, 10, 50, i++);
+		SLIDER(descriptionHeight, 0, 100, i++);
+		SLIDER(titleY, 0, 30, i++);
+		SLIDER(authorY, 20, 50, i++);
+		SLIDER(descriptionY, 0, 100, i++);
+		SLIDER(descriptionChars, 75, 200, i++);
+		SLIDER(stretchTop, 0, 20, i++);
+		SLIDER(stretchRight, 0, 20, i++);
+		SLIDER(stretchBottom, 0, 20, i++);
+		SLIDER(stretchLeft, 0, 20, i++);
+		SLIDER(scrollPerS, 0.1, 15, i++);
 #endif
 	}
 }

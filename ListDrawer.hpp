@@ -11,7 +11,7 @@
 namespace tomolatoon
 {
 	static const auto defaultHeightf    = [&]() -> int32 { using namespace tomolatoon::Units; return static_cast<int32>(100_shf() / 7); };
-	static const auto defaultmaxheightf = [&](int32 m_height) -> int32 { return static_cast<int32>(m_height * 1.3); };
+	static const auto defaultmaxheightf = [&](int32 m_height) -> int32 { return static_cast<int32>(m_height * 1.1); };
 	static const auto defaultcenterf    = [&]() -> int32 { return static_cast<int32>(Scene::Center().y); };
 
 	template <
@@ -29,7 +29,7 @@ namespace tomolatoon
 	{
 		struct IDrawer
 		{
-			virtual void draw(double per) {}
+			virtual void draw(double per, double stopTime) {}
 
 			virtual ~IDrawer() = default;
 		};
@@ -46,7 +46,7 @@ namespace tomolatoon
 			return this->add(std::make_shared<Drawable>(std::forward<Args>(args)...));
 		}
 
-		template <std::invocable<double> Lam>
+		template <std::invocable<double, double> Lam>
 		size_t add(Lam lam)
 		{
 			struct LambdaWrapper : IDrawer
@@ -54,9 +54,9 @@ namespace tomolatoon
 				LambdaWrapper(Lam lam) noexcept
 					: lambda(std::move(lam)) {}
 
-				void draw(double per) override
+				void draw(double per, double stopTime) override
 				{
-					lambda(per);
+					lambda(per, stopTime);
 				}
 
 			private:
@@ -66,7 +66,7 @@ namespace tomolatoon
 			return this->add(std::make_unique<LambdaWrapper>(std::move(lam)));
 		}
 
-		template <std::invocable<double> Lam>
+		template <std::invocable<double, double> Lam>
 		void addAsArray(const Array<Lam>& lam)
 		{
 			std::ranges::for_each(lam, [&](Lam e) { this->add(std::move(e)); });
@@ -103,7 +103,8 @@ namespace tomolatoon
 			Coasting        = 0b0000'0100, // 惰性移動中
 			ToStoppingFirst = 0b0000'1000, // 止まり始めた最初の1フレーム
 			ToStopping      = 0b0001'0000, // 止まろうとしてる時
-			Stopping        = 0b0010'0000, // 完全に止まった時
+			StoppingFirst   = 0b0010'0000, // 完全に止まった最初の1フレーム
+			Stopping        = 0b0100'0000, // 完全に止まった時
 		};
 
 		State getState() const noexcept
@@ -116,12 +117,10 @@ namespace tomolatoon
 			return m_selected;
 		}
 
-		int32 draw(bool isMouseIgnore = false)
+		int32 update(bool isMouseIgnore = false)
 		{
-			m_toStoppingHeight.setRange(m_heightf(), m_maxHeightf(m_heightf()));
-
 			// [0, m_drawables.size() * m_heightf()) に丸める
-			auto rounding = [&](auto fp) {
+			const auto rounding = [&](auto fp) {
 				if (fp < 0.0)
 				{
 					return m_drawables.size() * m_heightf() + Fmod(fp, m_drawables.size() * m_heightf());
@@ -132,6 +131,9 @@ namespace tomolatoon
 				}
 			};
 
+			// drawer の領域の大きさが途中で変わっても、真ん中の要素の高さを追従する
+			m_toStoppingHeight.setRange(m_heightf(), m_maxHeightf(m_heightf()));
+
 			// state 更新
 			if (!isMouseIgnore && Iframe::Rect().mouseOver() && !MouseL.down() && (MouseL.pressed() || MouseL.up()))
 			{
@@ -139,11 +141,18 @@ namespace tomolatoon
 			}
 			else
 			{
-				if (Abs(m_vel) < 100)
+				if (Abs(m_vel) < 2000)
 				{
 					if (m_toStoppingDiff.isFinish())
 					{
-						m_state = State::Stopping;
+						if (m_state != State::StoppingFirst && m_state != State::Stopping)
+						{
+							m_state = State::StoppingFirst;
+						}
+						else
+						{
+							m_state = State::Stopping;
+						}
 					}
 					else
 					{
@@ -163,7 +172,7 @@ namespace tomolatoon
 				}
 			}
 
-			// 更新
+			// state 依存の更新
 			switch (m_state)
 			{
 				using enum State;
@@ -189,68 +198,78 @@ namespace tomolatoon
 				m_toStoppingHeight.updateByDeltaSec(true);
 			}
 			break;
+			case StoppingFirst:
 			case Stopping:
 				break;
 			}
 
-			if (m_state & ~(State::ToStoppingFirst | State::ToStopping | State::Stopping))
+			if (m_state & ~(State::ToStoppingFirst | State::ToStopping | State::StoppingFirst | State::Stopping))
 			{
 				m_toStoppingDiff.setRange(0.0, 0.0);
 				m_toStoppingDiff.updateByDeltaSec(false, 1.0);
 				m_toStoppingHeight.updateByDeltaSec(false);
 			}
 
+			if (m_state & ~(State::StoppingFirst | State::Stopping))
+			{
+				m_lastStopTime = Scene::Time();
+			}
+
 			// 実際に真ん中に据えるカード分の座標差
-			m_diff           = rounding(m_diff + m_vel * Scene::DeltaTime() + m_toStoppingDiff.deltaValue(EaseOutQuint));
+			m_diff     = rounding(m_diff + m_vel * Scene::DeltaTime() + m_toStoppingDiff.deltaValue(EaseOutQuint));
 			// 中央に存在するカードのインデックス
-			m_selected       = m_drawables.size() - 1 - static_cast<int32>(m_diff / m_heightf());
+			m_selected = m_drawables.size() - 1 - static_cast<int32>(m_diff / m_heightf());
+
+			return m_selected;
+		}
+
+		void draw() const
+		{
 			// startIndex の描画を開始する位置(y座標)
 			double startY    = m_centerf() + m_diff - m_heightf() * (m_drawables.size() - m_selected) - (m_toStoppingHeight.value() - m_heightf()) / 2;
 			// startIndex の描画位置(Rect)
 			Rect   startRect = RectF{0.0, startY, static_cast<double>(Iframe::Width()), m_toStoppingHeight.value()}.asRect();
 
-			Print << U"m_vel: {}\ndiff:{}\nselected:{}\ncenterY:{}\ncenterRect:{}"_fmt(m_vel, m_diff, m_selected, startY, startRect);
+			// [0, m_drawables.size()) に丸めながら増減させる
+			const auto inc = [&](int32 index) { return index + 1 >= m_drawables.size() ? 0 : index + 1; };
+			const auto dec = [&](int32 index) { return index - 1 < 0 ? m_drawables.size() - 1 : index - 1; };
 
-			// 描画
+			// 停止してからの時間、停止していなければ -1
+			const auto stopTime = [&]() { return Scene::Time() - m_lastStopTime; };
+
+			// Print << U"m_vel: {}\ndiff:{}\nselected:{}\ncenterY:{}\ncenterRect:{}"_fmt(m_vel, m_diff, m_selected, startY, startRect);
+
+			// 中央のカード
 			{
-				// [0, m_drawables.size()) に丸めながら増減させる
-				const auto inc = [&](int32 index) { return index + 1 >= m_drawables.size() ? 0 : index + 1; };
-				const auto dec = [&](int32 index) { return index - 1 < 0 ? m_drawables.size() - 1 : index - 1; };
+				ScopedIframe2D iframe(startRect);
+				//Iframe::Rect().draw(Palette::Azure);
+				m_drawables[m_selected].get()->draw(m_toStoppingDiff.transition(EaseOutQuint), stopTime());
+			}
 
-				// 中央のカード
+			// 上半分のカードたち
+			{
+				int32 index = dec(m_selected);
+				Rect  rect  = Rect{startRect.tl().movedBy(0, -m_heightf()), Iframe::Width(), m_heightf()};
+
+				// bl は実際の領域よりも下方向に 1px はみ出していると考えられるので 0 は含まないでおく
+				for (; rect.bl().y > 0; rect.moveBy(0, -m_heightf()), index = dec(index))
 				{
-					ScopedIframe2D iframe(startRect);
-					//Iframe::Rect().draw(Palette::Azure);
-					m_drawables[m_selected].get()->draw(m_toStoppingDiff.transition(EaseOutQuint));
-				}
-
-				// 上半分のカードたち
-				{
-					int32 index = dec(m_selected);
-					Rect  rect  = Rect{startRect.tl().movedBy(0, -m_heightf()), Iframe::Width(), m_heightf()};
-
-					// bl は実際の領域よりも下方向に 1px はみ出していると考えられるので 0 は含まないでおく
-					for (; rect.bl().y > 0; rect.moveBy(0, -m_heightf()), index = dec(index))
-					{
-						ScopedIframe2D iframe(rect);
-						m_drawables[index].get()->draw(0.0);
-					}
-				}
-
-				// 下半分のカードたち
-				{
-					int32 index = inc(m_selected);
-					Rect  rect  = Rect{startRect.bl(), Iframe::Width(), m_heightf()};
-
-					for (; rect.tl().y < Iframe::Height(); rect.moveBy(0, m_heightf()), index = inc(index))
-					{
-						ScopedIframe2D iframe(rect);
-						m_drawables[index].get()->draw(0.0);
-					}
+					ScopedIframe2D iframe(rect);
+					m_drawables[index].get()->draw(0.0, stopTime());
 				}
 			}
 
-			return m_selected;
+			// 下半分のカードたち
+			{
+				int32 index = inc(m_selected);
+				Rect  rect  = Rect{startRect.bl(), Iframe::Width(), m_heightf()};
+
+				for (; rect.tl().y < Iframe::Height(); rect.moveBy(0, m_heightf()), index = inc(index))
+				{
+					ScopedIframe2D iframe(rect);
+					m_drawables[index].get()->draw(0.0, stopTime());
+				}
+			}
 		}
 
 		ListDrawer() = default;
@@ -271,6 +290,7 @@ namespace tomolatoon
 		CenterF                         m_centerf          = defaultcenterf;
 		double                          m_vel              = 0.0;
 		double                          m_diff             = -(double)m_heightf() / 2;
+		double                          m_lastStopTime     = 0;
 		LerpTransition                  m_toStoppingDiff   = {0.5s, 0.25s, 0.0, 0.0};
 		LerpTransition                  m_toStoppingHeight = {0.1s, 0.1s, m_heightf(), m_maxHeightf(m_heightf())};
 		Array<std::shared_ptr<IDrawer>> m_drawables        = {};
