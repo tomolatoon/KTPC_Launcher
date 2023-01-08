@@ -24,7 +24,7 @@ namespace tomolatoon
 	template <class Source>
 	struct ExpressionFunctor
 	{
-		ExpressionFunctor(Source source)
+		constexpr ExpressionFunctor(Source source)
 			: source(source) {}
 
 #define TOMOLATOON_EXPRESSION_FUNCTOR_OP(op)                                                                                             \
@@ -59,7 +59,7 @@ namespace tomolatoon
 		TOMOLATOON_EXPRESSION_FUNCTOR_OP(/);
 		TOMOLATOON_EXPRESSION_FUNCTOR_OP(%);
 
-		auto operator()() const
+		auto operator()() const noexcept(noexcept(source()))
 		{
 			return source();
 		}
@@ -92,7 +92,7 @@ namespace tomolatoon
 		template <detail::unary_arithmetic_chainer_function F>
 		struct unary_arithmetic_chainer
 		{
-			unary_arithmetic_chainer(F f)
+			constexpr unary_arithmetic_chainer(F f)
 				: f(f) {}
 
 			template <detail::unary_arithmetic_chainer_source_function F>
@@ -111,9 +111,9 @@ namespace tomolatoon
 			F f;
 		};
 
-		const unary_arithmetic_chainer Floorf{[](double v) { return std::floor(v); }};
-		const unary_arithmetic_chainer Roundf{[](double v) { return std::round(v); }};
-		const unary_arithmetic_chainer Ceilf{[](double v) { return std::ceil(v); }};
+		inline constexpr unary_arithmetic_chainer Floorf{[](const double v) { return std::floor(v); }};
+		inline constexpr unary_arithmetic_chainer Roundf{[](const double v) { return std::round(v); }};
+		inline constexpr unary_arithmetic_chainer Ceilf{[](const double v) { return std::ceil(v); }};
 	} // namespace Operators
 
 } // namespace tomolatoon

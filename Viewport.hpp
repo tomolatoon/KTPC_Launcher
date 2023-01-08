@@ -4,17 +4,16 @@
 #include <concepts>
 #include <type_traits>
 #include <utility>
-#include "CurryGenerator.hpp"
 
 namespace tomolatoon
 {
 	namespace
 	{
-		const auto ScopedIframe2DRect = [](Rect rect, bool isError) {
+		const auto ScopedIframe2DRect = [](Rect rect, bool isStrict) {
 			const auto viewport = Graphics2D::GetViewport().value_or(Scene::Rect());
 			auto       newRect  = rect;
 
-			if (isError)
+			if (isStrict)
 			{
 				const auto left   = (rect.tl().x < 0 ? 0 - rect.tl().x : 0);
 				const auto right  = (rect.br().x >= viewport.w ? rect.br().x - viewport.w : 0);
@@ -34,15 +33,12 @@ namespace tomolatoon
 
 			return newRect.movedBy(viewport.tl());
 		};
-
-		struct ScopedIframe2DErrorTag
-		{};
 	} // namespace
 
 	/// @brief ScopedIframe2D の Iframe 領域の設定の仕方と、エラー報告についてを設定するフラグ
 	/// No に設定すると、現在の Iframe 領域をはみ出した領域に新たな Iframe 領域を設定することが出来るようになります。
 	/// Yes (default) に設定すると、現在の Iframe 領域をはみ出すように新たな Iframe 領域を設定しようとすると、現在の領域の中に収まるように丸められます。
-	using ScopedIframe2DError = YesNo<ScopedIframe2DErrorTag>;
+	using ScopedIframe2DError = YesNo<struct ScopedIframe2DErrorTag>;
 
 	struct ScopedIframe2D
 		: s3d::ScopedViewport2D
@@ -91,5 +87,9 @@ namespace tomolatoon
 			return s3d::Rect{0, 0, Size()};
 		}
 	};
+
+	using PositionBasedIframe = YesNo<struct PositionBasedIframe_tag>;
+
+	ScopedRenderStates2D CreateScissorRect(Rect rect, PositionBasedIframe b = PositionBasedIframe::No);
 
 } // namespace tomolatoon

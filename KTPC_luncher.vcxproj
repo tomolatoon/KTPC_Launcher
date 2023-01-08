@@ -119,11 +119,14 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Load.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Units.cpp" />
+    <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="App\engine\texture\box-shadow\128.png" />
@@ -321,11 +324,14 @@
     <Xml Include="App\example\xml\test.xml" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DataTypes.hpp" />
     <ClInclude Include="ExpressionFunctor.hpp" />
     <ClInclude Include="GraphemeView.hpp" />
     <ClInclude Include="LerpTransition.hpp" />
     <ClInclude Include="ListDrawer.hpp" />
+    <ClInclude Include="Load.hpp" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="UnicodeProperty.hpp" />
     <ClInclude Include="Units.hpp" />
     <ClInclude Include="Utility.hpp" />
     <ClInclude Include="Viewport.hpp" />
