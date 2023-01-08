@@ -9,86 +9,16 @@
 // #include "CurryGenerator.hpp"
 #include "ListDrawer.hpp"
 #include "GraphemeView.hpp"
-
-#include <unicode/uchar.h>
-#include <unicode/brkiter.h>
+#include "DataTypes.hpp"
+#include "Load.hpp"
 
 namespace tomolatoon
 {
-	namespace Unicode
-	{
-		namespace Property
-		{
-			template <class GetType, UProperty PropertyIndex>
-			GetType GetProperty(char32 ch)
-			{
-				return static_cast<GetType>(u_getIntPropertyValue(ch, PropertyIndex));
-			}
-
-			template <class GetType>
-			GetType GetProperty(char32 ch, UProperty propIndex)
-			{
-				return static_cast<GetType>(u_getIntPropertyValue(ch, propIndex));
-			}
-
-			ULineBreak GetLineBreak(char32 ch)
-			{
-				return GetProperty<ULineBreak, UCHAR_LINE_BREAK>(ch);
-			}
-
-			String GetUnicodeName(char32 c)
-			{
-				char           buffer[100];
-				icu::ErrorCode errorCode;
-
-				size_t size = u_charName(c, U_UNICODE_CHAR_NAME, buffer, std::ranges::size(buffer), errorCode);
-
-				return s3d::Unicode::FromUTF8({buffer, size});
-			}
-		} // namespace Property
-
-	} // namespace Unicode
-
-	using PositionBasedIframe = YesNo<struct PositionBasedIframe_tag>;
-
-	auto CreateScissorRect(Rect rect, PositionBasedIframe b = PositionBasedIframe::No)
-	{
-		Rect scissor = b ? rect.movedBy(Iframe::RectAtScene().tl()) : rect;
-
-		Graphics2D::SetScissorRect(scissor);
-
-		RasterizerState rs = RasterizerState::Default2D;
-		rs.scissorEnable   = true;
-
-		return ScopedRenderStates2D{rs};
-	}
 } // namespace tomolatoon
-
 
 void Main()
 {
-	struct Game
-	{
-		String        title;
-		String        author;
-		URL           exe;
-		Texture       icon;
-		String        description;
-		int32         year;
-		Array<String> tags;
-		Color         background;
-
-		Game(const JSON& json, std::filesystem::path jsonPath)
-			: title(json[U"title"].get<String>())
-			, author(json[U"author"].get<String>())
-			, exe(json[U"exe"].get<URL>())
-			, icon([&](auto&& e) { std::filesystem::path iconPath = (jsonPath.parent_path().u32string() + e.toUTF32()); return Texture{iconPath.u32string()}; }(json[U"icon"].get<URL>()))
-			, description(json[U"description"].get<String>())
-			, year(json[U"year"].get<int32>())
-			, tags([](auto&& e) { Array<String> ret; for (auto&& [key,value] : e) { ret.push_back(value.get<String>()); } return ret; }(json[U"tags"]))
-			, background([](auto&& e) { if (e) { return Color{e[0].get<uint8>(), e[1].get<uint8>(), e[2].get<uint8>()}; } else { return Color{66,66,66}; } }(json.hasElement(U"background") ? json[U"background"] : JSON::Invalid()))
-		{}
-	};
+	using tomolatoon::Game;
 
 	JSON                     settings;
 	JSONSchema               schema;
@@ -96,53 +26,14 @@ void Main()
 	Array<Texture>           icons;
 	Array<Game>              games;
 	const int32              baseFontSize = System::EnumerateMonitors()[System::GetCurrentMonitorIndex()].fullscreenResolution.y / 15;
-	Font                     font         = {baseFontSize, Typeface::Mplus_Black};
+	Font                     fontBlack    = {baseFontSize, Typeface::Mplus_Black};
+	Font                     fontSemi     = {baseFontSize, Typeface::Mplus_Bold};
 	Font                     emoji        = {baseFontSize, Typeface::ColorEmoji};
 
-	font.addFallback(emoji);
+	fontBlack.addFallback(emoji);
+	fontSemi.addFallback(emoji);
 
-	{
-		if ((schema = JSONSchema::Load(U"./data.schema.json")).isEmpty())
-		{
-			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"規定の JSON Schema ファイルが実行ファイルと同じディレクトリに data.schema.json という名前で配置されていませんでした。");
-			return;
-		}
-
-		const Array<String>& args = System::GetCommandLineArgs();
-
-		if (args.size() <= 1)
-		{
-			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"ゲームについてのデータを提供して下さい。ゲームについてのデータは JSON 形式で、拡張子は .json とし、規定の JSON Schema に従う形で作成し、その JSON へのパスをコマンドライン引数に指定してください。");
-			return;
-		}
-
-		std::filesystem::path jsonPath = args[1].toUTF32();
-
-		if (!(jsonPath.extension() == U".json"))
-		{
-			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"コマンドライン引数にパス（{}）が渡されましたが、拡張子が JSON ではありませんでした。ゲームについてのデータは JSON 形式で、拡張子は .json とし、規定の JSON Schema に従う形で作成してください。"_fmt(jsonPath.u32string()));
-			return;
-		}
-		else if (!std::filesystem::exists(jsonPath))
-		{
-			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"コマンドライン引数にパス（{}）が渡されましたが、そのパスに該当するファイルが存在しませんでした。ゲームについてのデータは JSON 形式で、拡張子は .json とし、規定の JSON Schema に従う形で作成してください。"_fmt(jsonPath.u32string()));
-			return;
-		}
-		else
-		{
-			settings = JSON::Load(jsonPath.u32string());
-		}
-
-		if (auto&& details = schema.validateWithDetails(settings); details.isError())
-		{
-			System::MessageBoxOK(U"KTPC Launcher Initialization Error", U"ファイルは存在しましたが、規定の JSON Schema に沿った JSON データではありませんでした。規定の JSON Schema に従う形で作成してください。エラーメッセージは次に示す通りです。\n{}"_fmt(Format(details)));
-			return;
-		}
-		else
-		{
-			std::ranges::for_each(settings[U"games"], [&](auto&& item) { auto&& [key, game] = item; games.push_back(Game{game, jsonPath}); });
-		}
-	}
+	tomolatoon::InitialLoad(settings, games);
 
 	Window::Resize(1755, 810, Centering::Yes);
 	Scene::SetResizeMode(ResizeMode::Actual);
@@ -150,7 +41,7 @@ void Main()
 	using namespace tomolatoon::Units;
 	using namespace std::placeholders;
 	using namespace tomolatoon::Operators;
-	using tomolatoon::Iframe, tomolatoon::Curry::To, tomolatoon::ScopedIframe2D;
+	using tomolatoon::Iframe, tomolatoon::ScopedIframe2D;
 
 	//const auto rect = To<Rect>::With(std::bind(sw, _2), _1, 40_swf, 100_shf / 7 | Ceilf);
 
@@ -167,7 +58,7 @@ void Main()
 	LISTDRAWER_VAR_DEFINE descriptionHeight = 13.5;
 	LISTDRAWER_VAR_DEFINE titleY            = 4;
 	LISTDRAWER_VAR_DEFINE authorY           = 31;
-	LISTDRAWER_VAR_DEFINE descriptionY      = 57.5;
+	LISTDRAWER_VAR_DEFINE descriptionY      = 60;
 	LISTDRAWER_VAR_DEFINE descriptionChars  = 75;
 	LISTDRAWER_VAR_DEFINE stretchTop        = 0;
 	LISTDRAWER_VAR_DEFINE stretchRight      = 0;
@@ -186,7 +77,7 @@ void Main()
 				const auto oneLineScroller = [&](const String& s, double fontSize, double x, double y, double width) {
 					if (per == 1.0)
 					{
-						DrawableText text   = font(s);
+						DrawableText text   = fontBlack(s);
 						RectF        region = text.region(fontSize, x, y);
 
 						if (region.w <= width)
@@ -205,7 +96,7 @@ void Main()
 					}
 					else
 					{
-						font(s).draw(fontSize, x, y);
+						fontBlack(s).draw(fontSize, x, y);
 					}
 				};
 
@@ -227,7 +118,7 @@ void Main()
 				{
 					const String& grapheme = *it;
 
-					DrawableText text   = font(grapheme);
+					DrawableText text   = fontSemi(grapheme);
 					RectF        region = text.region(fontSize, pos);
 
 					const auto draw = [&]() {
@@ -268,7 +159,11 @@ void Main()
 			};
 
 			{
-				textRegion(e.description, vh(descriptionHeight), {20.5_vw, vh(descriptionY)}, 19_vw + 79.5_vw);
+				RectF scissorRegion = RectF{20.5_vw, vh(descriptionY), 78_vw, vh(descriptionHeight) * 2 + 10_vh}.stretched(vh(stretchTop), vw(stretchRight), vh(stretchBottom), vw(stretchLeft));
+				//scissorRegion.draw(Palette::Aqua);
+
+				ScopedRenderStates2D scissor = tomolatoon::CreateScissorRect(scissorRegion.asRect(), tomolatoon::PositionBasedIframe::Yes);
+				textRegion(e.description, vh(descriptionHeight), {20.5_vw, vh(descriptionY)}, scissorRegion.tr().x);
 			}
 		};
 	}));
