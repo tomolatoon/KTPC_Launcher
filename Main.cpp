@@ -73,6 +73,14 @@ void Main()
 			Iframe::Rect().draw(e.background);
 			e.icon.resized(Iframe::Height() * 0.8).drawAt(10_vw, Iframe::Center().y);
 
+			const double addtionalHiddenTime = 1.0;
+
+			const auto calDiff = [&](const double time, const double scrollVel, const double textWidth, const double regionWidth, const size_t lines) {
+				const double loopTime    = (textWidth + regionWidth * lines) / scrollVel + addtionalHiddenTime;
+				const double virtualDiff = Fmod(time, loopTime) * scrollVel;
+				return -virtualDiff < -textWidth ? -virtualDiff + addtionalHiddenTime * scrollVel + textWidth + regionWidth * lines : -virtualDiff;
+			};
+
 			{
 				const auto oneLineScroller = [&](const String& s, double fontSize, double x, double y, double width) {
 					if (per == 1.0)
@@ -86,12 +94,7 @@ void Main()
 						}
 						else
 						{
-							const double scrollVel           = width / scrollPerS;
-							const double halfLoopTime        = region.w / scrollVel;
-							const double per                 = (Fmod(stopTime + halfLoopTime, halfLoopTime * 2) - halfLoopTime) / halfLoopTime;
-							const double addtionalHiddenTime = 1.0;
-							const double baseDiff            = per * (per >= 0.0 ? region.w : width + scrollVel * addtionalHiddenTime);
-							text.draw(fontSize, x - baseDiff, y);
+							text.draw(fontSize, x + calDiff(stopTime, width / scrollPerS, region.w, width, 1), y);
 						}
 					}
 					else
@@ -109,52 +112,73 @@ void Main()
 				oneLineScroller(e.author, vh(authorHeight), 20.5_vw, vh(authorY), scissorRegion.w);
 			}
 
-			const auto textRegion = [&](const String& s, const double fontSize, const Vec2 firstPos, const double maxX) {
-				int32 break_    = 0;
-				Vec2  pos       = firstPos;
-				auto  graphemes = s | tomolatoon::views::graphme;
-				auto  end       = std::ranges::end(graphemes);
+			const auto textRegion = [&](const String& s, const double fontSize, const Vec2 firstPos, const double width) {
+				const RectF  oneLineRegion = fontSemi(s).region(fontSize);
+				const double lineHeight    = oneLineRegion.h;
+				const double allLength     = oneLineRegion.w;
+
+				const auto xMappingToVec2 = [&](const double x) {
+					if (x < width)
+					{
+						return firstPos.movedBy(x, 0);
+					}
+					else
+					{
+						return firstPos.movedBy(x - width, lineHeight);
+					}
+				};
+
+				const auto xToDrawPos = [&](const double x, const double w) -> std::tuple<Optional<Vec2>, Optional<Vec2>> {
+					if (x + w < 0 || width * 2 < x)
+					{
+						return {none, none};
+					}
+					else if ((x < width && x + w < width) || (x >= width))
+					{
+						return {xMappingToVec2(x), none};
+					}
+					else
+					{
+						return {xMappingToVec2(x), xMappingToVec2(x + w).movedBy(-w, 0)};
+					}
+				};
+
+				int32  break_    = 0;
+				double x         = per == 1.0 && allLength > width * 2 ? calDiff(stopTime, width / scrollPerS, allLength, width, 2) : 0;
+				auto   graphemes = s | tomolatoon::views::graphme;
+				auto   end       = std::ranges::end(graphemes);
 				for (auto it = std::ranges::begin(graphemes); it != end; ++it)
 				{
 					const String& grapheme = *it;
 
 					DrawableText text   = fontSemi(grapheme);
-					RectF        region = text.region(fontSize, pos);
+					RectF        region = text.region(fontSize);
 
-					const auto draw = [&]() {
-						//region.draw(Palette::Coral);
-						text.draw(fontSize, pos);
+					auto [f, s] = xToDrawPos(x, region.w);
 
-						pos = region.tr();
+					const auto draw = [&](const Optional<Vec2>& p) {
+						if (p)
+						{
+							text.draw(fontSize, p.value());
+						}
 					};
 
-					const auto isPreventBreak = [](const String& s) {
-						return s == U"、" || s == U"。";
-					};
-
-					if (pos.x + region.w > maxX)
+					if (per != 1.0)
 					{
-						if (isPreventBreak(grapheme))
+						const auto is = [&](Array<StringView> svs) {
+							return svs.any([&](auto e) { return e == grapheme; });
+						};
+						if (is({U"、", U"。"}) && f && s)
 						{
-							draw();
-						}
-						else
-						{
-							pos    = Vec2{firstPos.x, pos.y + region.h};
-							region = text.region(fontSize, pos);
-
-							if (++break_ == 2)
-							{
-								break;
-							}
-
-							draw();
+							draw(f);
+							x = width;
+							continue;
 						}
 					}
-					else
-					{
-						draw();
-					}
+
+					draw(f), draw(s);
+
+					x += region.w;
 				}
 			};
 
@@ -163,7 +187,7 @@ void Main()
 				//scissorRegion.draw(Palette::Aqua);
 
 				ScopedRenderStates2D scissor = tomolatoon::CreateScissorRect(scissorRegion.asRect(), tomolatoon::PositionBasedIframe::Yes);
-				textRegion(e.description, vh(descriptionHeight), {20.5_vw, vh(descriptionY)}, scissorRegion.tr().x);
+				textRegion(e.description, vh(descriptionHeight), {20.5_vw, vh(descriptionY)}, scissorRegion.w);
 			}
 		};
 	}));
