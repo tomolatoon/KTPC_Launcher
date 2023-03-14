@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="s3d::JSON">
+		<DisplayString Condition="m_isValid == false">
+			Invalid
+		</DisplayString>
+		<DisplayString Condition="m_isValid == true &amp;&amp; m_detail->m_json.index() == 0">
+			{m_detail->m_json._Head}
+		</DisplayString>
+		<DisplayString Condition="m_isValid == true &amp;&amp; m_detail->m_json.index() == 1">
+			{*(m_detail->m_json._Tail._Head._Ptr)}
+		</DisplayString>
+		<Expand>
+			<ExpandedItem Condition="m_isValid == true &amp;&amp; m_detail->m_json.index() == 0">
+				m_detail->m_json._Head
+			</ExpandedItem>
+			<ExpandedItem Condition="m_isValid == true &amp;&amp; m_detail->m_json.index() == 1">
+				*(m_detail->m_json._Tail._Head._Ptr)
+			</ExpandedItem>
+		</Expand>
+	</Type>
+</AutoVisualizer>

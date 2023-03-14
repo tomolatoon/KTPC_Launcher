@@ -823,4 +823,8 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Siv3DTypes.natvis" />
+    <Natvis Include="nlohmann_json.natvis" />
+  </ItemGroup>
 </Project>
