@@ -9,5 +9,5 @@
 
 namespace tomolatoon
 {
-	void InitialLoad(JSON& settings, Array<Game>& games) noexcept;
+	Array<Game> InitialLoad() noexcept;
 }

@@ -1,0 +1,135 @@
+BasedOnStyle: WebKit
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments: AcrossComments
+AlignConsecutiveBitFields: AcrossComments
+AlignConsecutiveDeclarations: AcrossComments
+AlignConsecutiveMacros: AcrossComments
+AlignEscapedNewlines: Left
+AlignOperands: AlignAfterOperator
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
+AttributeMacros: ["WINAPI", "CALLBACK", "__bcount", "__bcount_opt", "__deref_bcount", "__deref_bcount_opt", "__deref_ecount", "__deref_ecount_opt", "__deref_in", "__deref_in_bcount", "__deref_in_bcount_opt", "__deref_in_ecount", "__deref_in_ecount_opt", "__deref_in_opt", "__deref_inout", "__deref_inout_bcount", "__deref_inout_bcount_full", "__deref_inout_bcount_full_opt", "__deref_inout_bcount_opt", "__deref_inout_bcount_part", "__deref_inout_bcount_part_opt", "__deref_inout_ecount", "__deref_inout_ecount_full", "__deref_inout_ecount_full_opt", "__deref_inout_ecount_opt", "__deref_inout_ecount_part", "__deref_inout_ecount_part_opt", "__deref_inout_opt", "__deref_opt_bcount", "__deref_opt_bcount_opt", "__deref_opt_ecount", "__deref_opt_ecount_opt", "__deref_opt_in", "__deref_opt_in_bcount", "__deref_opt_in_bcount_opt", "__deref_opt_in_ecount", "__deref_opt_in_ecount_opt", "__deref_opt_in_opt", "__deref_opt_inout", "__deref_opt_inout_bcount", "__deref_opt_inout_bcount_full", "__deref_opt_inout_bcount_full_opt", "__deref_opt_inout_bcount_opt", "__deref_opt_inout_bcount_part", "__deref_opt_inout_bcount_part_opt", "__deref_opt_inout_ecount", "__deref_opt_inout_ecount_full", "__deref_opt_inout_ecount_full_opt", "__deref_opt_inout_ecount_opt", "__deref_opt_inout_ecount_part", "__deref_opt_inout_ecount_part_opt", "__deref_opt_inout_opt", "__deref_opt_out", "__deref_opt_out_bcount", "__deref_opt_out_bcount_full", "__deref_opt_out_bcount_full_opt", "__deref_opt_out_bcount_opt", "__deref_opt_out_bcount_part", "__deref_opt_out_bcount_part_opt", "__deref_opt_out_ecount", "__deref_opt_out_ecount_full", "__deref_opt_out_ecount_full_opt", "__deref_opt_out_ecount_opt", "__deref_opt_out_ecount_part", "__deref_opt_out_ecount_part_opt", "__deref_opt_out_opt", "__deref_out", "__deref_out_bcount", "__deref_out_bcount_full", "__deref_out_bcount_full_opt", "__deref_out_bcount_opt", "__deref_out_bcount_part", "__deref_out_bcount_part_opt", "__deref_out_ecount", "__deref_out_ecount_full", "__deref_out_ecount_full_opt", "__deref_out_ecount_opt", "__deref_out_ecount_part", "__deref_out_ecount_part_opt", "__deref_out_opt", "__ecount", "__ecount_opt", "__in", "__in_bcount", "__in_bcount_opt", "__in_ecount", "__in_ecount_opt", "__in_opt", "__inout", "__inout_bcount", "__inout_bcount_full", "__inout_bcount_full_opt", "__inout_bcount_opt", "__inout_bcount_part", "__inout_bcount_part_opt", "__inout_ecount", "__inout_ecount_full", "__inout_ecount_full_opt", "__inout_ecount_opt", "__inout_ecount_part", "__inout_ecount_part_opt", "__inout_opt", "__out", "__out_bcount", "__out_bcount_full", "__out_bcount_full_opt", "__out_bcount_opt", "__out_bcount_part", "__out_bcount_part_opt", "__out_ecount", "__out_ecount_full", "__out_ecount_full_opt", "__out_ecount_opt", "__out_ecount_part", "__out_ecount_part_opt", "__out_opt", "__blocksOn", "__callback", "__checkReturn", "__checkReturn", "__format_string", "__in_awcount", "__nullnullterminated", "__nullterminated", "__out_awcount", "__override", "__reserved", "__success", "__typefix"]
+BinPackArguments: false
+BinPackParameters: false
+BitFieldColonSpacing: Both
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+BreakBeforeConceptDeclarations: true
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+BreakStringLiterals: false
+ColumnLimit: 0
+CommentPragmas: \*
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DeriveLineEnding: true
+DerivePointerAlignment: false
+DisableFormat: false
+EmptyLineAfterAccessModifier: Leave
+EmptyLineBeforeAccessModifier: Always
+FixNamespaceComments: true
+ForEachMacros: [BOOST_FOREACH, TEST_MODULE_INITIALIZE, TEST_MODULE_CLEANUP, TEST_CLASS_INITIALIZE, TEST_METHOD_CLEANUP, TEST_METHOD_INITIALIZE, TEST_CLASS, TEST_CLASS_CLEANUP, TEST_METHOD, TEST_MODULE_CLEANUP]
+IncludeBlocks: Preserve
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: false
+IndentExternBlock: AfterExternBlock
+IndentGotoLabels: false
+IndentPPDirectives: AfterHash
+IndentRequires: false
+IndentWidth: 4
+IndentWrappedFunctionNames: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+LambdaBodyIndentation: Signature
+Language: Cpp
+MacroBlockBegin: "^_STD_BEGIN|\
+^TOMOLATOON_MAIN_BEGIN|\
+^BEGIN_TEST_*_ATTRIBUTE"
+MacroBlockEnd: "^_STD_END|\
+^TOMOLATOON_MAIN_END|\
+^END_TEST_*_ATTRIBUTE"
+MaxEmptyLinesToKeep: 3
+NamespaceIndentation: All
+NamespaceMacros: [""]
+PPIndentWidth: -1
+PackConstructorInitializers: CurrentLine
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+ReflowComments: false
+ShortNamespaceLines: 1
+SortIncludes: Never
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard: Latest
+StatementAttributeLikeMacros: ["emit"]
+StatementMacros: ["TEST_DESCRIPTION", "TEST_OWNER", "TEST_PRIORITY", "TEST_WORKITEM", "TEST_IGNORE", "TEST_MODULE_ATTRIBUTE", "BEGIN_TEST_CLASS_ATTRIBUTE", "TEST_METHOD_ATTRIBUTE"]
+TabWidth: 4
+TypenameMacros: []
+UseCRLF: true
+UseTab: AlignWithSpaces
+WhitespaceSensitiveMacros: [""]
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+RequiresClausePosition: SingleLine
+QualifierAlignment: Custom
+# "friend", 
+QualifierOrder: ["inline", "static", "constexpr", "const", "volatile", "type" ]
+SeparateDefinitionBlocks: Always
+AlignArrayOfStructures: Right
+LambdaBodyIndentation: OuterScope
+PPIndentWidth: 1
+BreakBeforeConceptDeclarations: Always
+EmptyLineBeforeAccessModifier: Always
+AllowShortLambdasOnASingleLine: All

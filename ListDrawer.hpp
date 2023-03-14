@@ -86,12 +86,12 @@ namespace tomolatoon
 			add(std::forward<Head1>(head));
 		}
 
-		IDrawer& getDrawer(int32 i)
+		IDrawer& getDrawer(int32 i) const
 		{
 			return *m_drawables.at(i).get();
 		}
 
-		size_t getDrawersSize() noexcept
+		size_t getDrawersSize() const noexcept
 		{
 			return m_drawables.size();
 		}

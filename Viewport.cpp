@@ -2,15 +2,33 @@
 
 namespace tomolatoon
 {
-	ScopedRenderStates2D CreateScissorRect(Rect rect, PositionBasedIframe b)
+	namespace v1
 	{
-		Rect scissor = b ? rect.movedBy(Iframe::RectAtScene().tl()) : rect;
+		ScopedRenderStates2D CreateScissorRect(Rect rect, PositionBasedIframe b)
+		{
+			Rect scissor = b ? rect.movedBy(Iframe::RectAtScene().tl()) : rect;
 
-		Graphics2D::SetScissorRect(scissor);
+			Graphics2D::SetScissorRect(scissor);
 
-		RasterizerState rs = RasterizerState::Default2D;
-		rs.scissorEnable   = true;
+			RasterizerState rs = RasterizerState::Default2D;
+			rs.scissorEnable   = true;
 
-		return ScopedRenderStates2D{rs};
-	}
-}
+			return ScopedRenderStates2D{rs};
+		}
+	} // namespace v1
+
+	namespace v2
+	{
+		ScopedRenderStates2D CreateScissorRect(Rect rect, PositionBasedIframe b)
+		{
+			Rect scissor = b ? rect.movedBy(Iframe::RectAtScene().tl()) : rect;
+
+			Graphics2D::SetScissorRect(scissor);
+
+			RasterizerState rs = RasterizerState::Default2D;
+			rs.scissorEnable   = true;
+
+			return ScopedRenderStates2D{rs};
+		}
+	} // namespace v1
+} // namespace tomolatoon
