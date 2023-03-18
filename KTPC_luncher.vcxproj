@@ -333,6 +333,7 @@
     <ClInclude Include="LerpTransition.hpp" />
     <ClInclude Include="ListDrawer.hpp" />
     <ClInclude Include="Load.hpp" />
+    <ClInclude Include="rivet.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="UnicodeProperty.hpp" />
     <ClInclude Include="Units.hpp" />

@@ -249,7 +249,6 @@ namespace tomolatoon
 		{
 			if (gamesLoad.isReady())
 			{
-				// 非同期処理の結果を取得する
 				getData() = gamesLoad.get();
 
 				changeScene(U"Main");

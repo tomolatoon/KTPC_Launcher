@@ -8,6 +8,8 @@
 #include <unicode/ubrk.h>
 #include <unicode/errorcode.h>
 
+#include "rivet.hpp"
+
 namespace tomolatoon
 {
 	template <std::ranges::input_range View>
@@ -139,6 +141,7 @@ namespace tomolatoon
 
 		// clang-format off
 		GraphemeView() requires std::default_initializable<View> = default;
+
 		// clang-format on
 
 		template <std::ranges::input_range Range>
@@ -166,7 +169,7 @@ namespace tomolatoon
 	{
 		namespace detail
 		{
-			struct GraphemeViewAdoptorClosure : std::ranges::range_adaptor_closure<GraphemeViewAdoptorClosure>
+			struct GraphemeViewAdoptorClosure : rivet::range_adaptor_closure_base<GraphemeViewAdoptorClosure>
 			{
 				template <std::ranges::viewable_range Range>
 				constexpr auto operator()(Range&& range) const
