@@ -431,4 +431,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 /ThirdParty/**/*
-/App/*.otf
+/App/**/*
+!/App/data.schema.json
+!/App/Resource.rc
