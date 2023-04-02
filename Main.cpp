@@ -12,6 +12,8 @@
 #include "DataTypes.hpp"
 #include "Load.hpp"
 
+#define DEBUGDRAW draw(Arg::top = HSV{0, 0.5, 0.5}, Arg::bottom = HSV{120, 0.5, 0.5})
+
 namespace tomolatoon
 {
 #define USINGS                          \
@@ -24,136 +26,149 @@ namespace tomolatoon
 
 	struct Main : App::Scene
 	{
+		inline static constexpr double additionalHiddenTime = 1.0;
+
 		Main(const InitData& init)
 			: IScene{init}
 		{
 			USINGS;
 
-			drawer.addAsArray(getData().map([&](const Game& e) {
+			m_drawer.addAsArray(getData().map([&](const Game& e) {
 				return [&](double per, double stopTime) {
-					// Print << U"{}, {}"_fmt(per, stopTime);
+					//Print << U"{}, {}"_fmt(per, stopTime);
 
+					auto if_1 = Iframe::Rect();
+					auto if_2 = Iframe::RectAtScene();
+
+					// Background
 					Iframe::Rect().draw(e.background);
+
+					// Icon
 					e.icon().resized(Iframe::Height() * 0.8).drawAt(10_vw, Iframe::Center().y);
 
-					const double addtionalHiddenTime = 1.0;
-
-					const auto calDiff = [&](const double time, const double scrollVel, const double textWidth, const double regionWidth, const size_t lines) {
-						const double loopTime    = (textWidth + regionWidth * lines) / scrollVel + addtionalHiddenTime;
-						const double virtualDiff = Fmod(time, loopTime) * scrollVel;
-						return -virtualDiff < -textWidth ? -virtualDiff + addtionalHiddenTime * scrollVel + textWidth + regionWidth * lines : -virtualDiff;
-					};
+					RectF{19_vw, 70_vh, 79.5_vw, 100_vh}.draw(Palette::Lightgrey);
 
 					{
-						const auto oneLineScroller = [&](const String& s, double fontSize, double x, double y, double width) {
-							if (per == 1.0)
-							{
-								DrawableText text   = FontAsset(U"Black")(s);
-								RectF        region = text.region(fontSize, x, y);
+						ScopedIframe2D iframe{
+							RectF{19_vw, 7.5_vh, 79.5_vw, 65_vh}
+								.draw(Palette::Gray)
+								.stretched(-1_vw, 0)
+								.asRect()
+                        };
 
-								if (region.w <= width)
-								{
-									text.draw(fontSize, x, y);
-								}
-								else
-								{
-									text.draw(fontSize, x + calDiff(stopTime, width / scrollPerS, region.w, width, 1), y);
-								}
-							}
-							else
-							{
-								FontAsset(U"Black")(s).draw(fontSize, x, y);
-							}
-						};
-
-						RectF region        = {19_vw, 7.5_vh, 79.5_vw, 50_vh};
-						RectF scissorRegion = region.stretched(-1_vw, 0);
-						region.draw(Palette::Gray);
-
-						ScopedRenderStates2D scissor = tomolatoon::CreateScissorRect(scissorRegion.asRect(), tomolatoon::PositionBasedIframe::Yes);
-						oneLineScroller(e.title, vh(titleHeight), 20_vw, vh(titleY), scissorRegion.w);
-						oneLineScroller(e.author, vh(authorHeight), 20.5_vw, vh(authorY), scissorRegion.w);
+						drawSingleline(e.title, per == 1.0, vh(titleHeight), 1.5_vw, vh(titleY));
+						drawSingleline(e.author, per == 1.0, vh(authorHeight), 2.5_vw, vh(authorY));
 					}
 
-					const auto textRegion = [&](const String& s, const double fontSize, const Vec2 firstPos, const double width) {
-						const RectF  oneLineRegion = FontAsset(U"Semi")(s).region(fontSize);
-						const double lineHeight    = oneLineRegion.h;
-						const double allLength     = oneLineRegion.w;
-
-						const auto xMappingToVec2 = [&](const double x) {
-							if (x < width)
-							{
-								return firstPos.movedBy(x, 0);
-							}
-							else
-							{
-								return firstPos.movedBy(x - width, lineHeight);
-							}
-						};
-
-						const auto xToDrawPos = [&](const double x, const double w) -> std::tuple<Optional<Vec2>, Optional<Vec2>> {
-							if (x + w < 0 || width * 2 < x)
-							{
-								return {none, none};
-							}
-							else if ((x < width && x + w < width) || (x >= width))
-							{
-								return {xMappingToVec2(x), none};
-							}
-							else
-							{
-								return {xMappingToVec2(x), xMappingToVec2(x + w).movedBy(-w, 0)};
-							}
-						};
-
-						int32  break_    = 0;
-						double x         = per == 1.0 && allLength > width * 2 ? calDiff(stopTime, width / scrollPerS, allLength, width, 2) : 0;
-						auto   graphemes = s | tomolatoon::views::graphme;
-						auto   end       = std::ranges::end(graphemes);
-						for (auto it = std::ranges::begin(graphemes); it != end; ++it)
-						{
-							const String& grapheme = *it;
-
-							DrawableText text   = FontAsset(U"Semi")(grapheme);
-							RectF        region = text.region(fontSize);
-
-							auto [f, s] = xToDrawPos(x, region.w);
-
-							const auto draw = [&](const Optional<Vec2>& p) {
-								if (p)
-								{
-									text.draw(fontSize, p.value());
-								}
-							};
-
-							if (per != 1.0)
-							{
-								const auto is = [&](Array<StringView> svs) {
-									return svs.any([&](auto e) { return e == grapheme; });
-								};
-								if (is({U"、", U"。"}) && f && s)
-								{
-									draw(f);
-									x = width;
-									continue;
-								}
-							}
-
-							draw(f), draw(s);
-
-							x += region.w;
-						}
-					};
-
-					{
-						RectF scissorRegion = RectF{20.5_vw, vh(descriptionY), 78_vw, vh(descriptionHeight) * 2 + 10_vh}.stretched(vh(stretchTop), vw(stretchRight), vh(stretchBottom), vw(stretchLeft));
-						//scissorRegion.draw(Palette::Aqua);
-
-						ScopedRenderStates2D scissor = tomolatoon::CreateScissorRect(scissorRegion.asRect(), tomolatoon::PositionBasedIframe::Yes);
-						textRegion(e.description, vh(descriptionHeight), {20.5_vw, vh(descriptionY)}, scissorRegion.w);
-					}
+					//Iframe::Rect().DEBUGDRAW;
 				};
 			}));
+		}
+
+		/// @brief x軸にどの程度移動した所が文字列の先頭位置かを返す。
+		/// なお、x軸は左上を0として、右方向へ軸を張り、右端まで来たら改行して lineHeight 下がったところに継続し、右下の方でこれ以上行を取れない所まで継続する。
+		/// @param time スクロール開始時刻からの経過時間[s]
+		/// @param additionalHiddenTime 更に隠し続ける時間[s]
+		/// @param scrollVel スクロール速度[px/s]
+		/// @param textWidth テキストを1行に描画した時の全長[px]
+		/// @param regionWidth 表示領域の幅[px]
+		/// @param lines 何行で描画するか
+		double calDiff(const double time, const double additionalHiddenTime, const double scrollVel, const double textWidth, const double regionWidth, const size_t lines) const noexcept
+		{
+			const double loopTime    = (textWidth + regionWidth * lines) / scrollVel + additionalHiddenTime;
+			const double virtualDiff = Fmod(time, loopTime) * scrollVel;
+			return -virtualDiff < -textWidth ? -virtualDiff + additionalHiddenTime * scrollVel + textWidth + regionWidth * lines : -virtualDiff;
+		}
+
+		void drawSingleline(const String& string, const bool enableScrooll, const double fontSize, const double x, const double y)
+		{
+			if (enableScrooll)
+			{
+				const DrawableText text   = FontAsset(U"Black")(string);
+				const RectF        region = text.region(fontSize, x, y);
+
+				const double xDiff = region.w > Iframe::Width() ? calDiff(m_drawer.stopTime(), additionalHiddenTime, scrollVelocity, region.w, Iframe::Width(), 1) : 0;
+				text.draw(fontSize, x + xDiff, y);
+			}
+			else
+			{
+				FontAsset(U"Black")(string).draw(fontSize, x, y);
+			}
+		}
+
+		/// @brief スクロールもする複数行に渡る文字列表示を行います。ScopedIframe を使って描画領域を制限のこと。
+		void drawMultiline(const String& string, const size_t lines, const bool enableScrooll, const double fontSize, const Vec2 firstPos) const
+		{
+			// x軸は左上を0として、右方向へ軸を張り、右端まで来たら改行して lineHeight 下がったところに継続し、右下の方でこれ以上行を取れない所まで継続する。
+
+			const double width            = Iframe::Width();
+			const RectF  singleLineRegion = FontAsset(U"Semi")(string).region(fontSize);
+			const double lineHeight       = singleLineRegion.h;
+			const double stringAllWidth   = singleLineRegion.w;
+			const double widthCapacity    = width * lines;
+
+			const auto xMappingToVec2 = [&](const double x) {
+				if (x < width)
+				{
+					return firstPos.movedBy(x, 0);
+				}
+				else
+				{
+					const size_t newlines = x / width;
+					return firstPos.movedBy(x - width * newlines, lineHeight * newlines);
+				}
+			};
+
+			const auto xToDrawPos = [&](const double x, const double w) -> std::tuple<Optional<Vec2>, Optional<Vec2>> {
+				if (x + w < 0 || widthCapacity < x)
+				{
+					return {none, none};
+				}
+				// 端っこに来てなければ width で mod を取っても大小は変わらない
+				else if (Fmod(x, width) <= Fmod(x + w, width) || widthCapacity < x + w)
+				{
+					return {xMappingToVec2(x), none};
+				}
+				else
+				{
+					return {xMappingToVec2(x), xMappingToVec2(x + w).movedBy(-w, 0)};
+				}
+			};
+
+			const double startX    = enableScrooll && stringAllWidth > widthCapacity ? calDiff(m_drawer.stopTime(), additionalHiddenTime, scrollVelocity, stringAllWidth, width, lines) : 0;
+			const auto   graphemes = string | tomolatoon::views::graphme;
+			auto         it        = std::ranges::begin(graphemes);
+			auto         end       = std::ranges::end(graphemes);
+			for (double x = startX; it != end; ++it)
+			{
+				const String& grapheme = *it;
+
+				DrawableText text   = FontAsset(U"Semi")(grapheme);
+				RectF        region = text.region(fontSize);
+
+				auto [f, s] = xToDrawPos(x, region.w);
+
+				const auto draw = [&](const Optional<Vec2>& p) {
+					if (p) text.draw(fontSize, p.value());
+				};
+
+				if (not enableScrooll)
+				{
+					const auto is = [&](Array<StringView> svs) {
+						return svs.any([&](auto e) { return e == grapheme; });
+					};
+					if (is({U"、", U"。"}) && f && s)
+					{
+						draw(f);
+						x = width;
+						continue;
+					}
+				}
+
+				draw(f), draw(s);
+
+				x += region.w;
+			}
 		}
 
 		void update() override
@@ -162,81 +177,98 @@ namespace tomolatoon
 
 			// List
 			{
-				drawer.update(RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver());
+				m_drawer.update(RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver());
 			}
 		}
 
-#define LISTDRAWER_DEBUG
-
-#ifdef LISTDRAWER_DEBUG
-# define LISTDRAWER_VAR_DEFINE double mutable
-#else
-# define LISTDRAWER_VAR_DEFINE const double
-#endif
-
 		void draw() const override
 		{
+			ClearPrint();
+			//Print << Profiler::GetStat().drawCalls;
+
 			USINGS;
 
 			const auto sliderStart = 15_sw;
 
-			ClearPrint();
-
 			// List
 			{
 				ScopedIframe2D iframe(RectF(sliderStart, 0, 44_sw, 100_sh).asRect());
-				drawer.draw();
+				m_drawer.draw();
 			}
 			// 画像
 			{
-				getData()[drawer.getSelected()].icon().resized(31.5_sw).draw(62_sw, 15.5_sh);
+				getData()[m_drawer.selected()].icon().resized(31.5_sw).draw(62_sw, 15.5_sh);
 			}
 			// その他
 			{
 				Line{0, 50_sh, Scene::Width(), 50_sh}.draw(LineStyle::Default, 1, ColorF{Palette::White, 1});
 				RectF{sliderStart, 90_sh, 85_sw, 10_sh}.asRect().draw(Palette::White);
 			}
-			drawer.getDrawer(drawer.getSelected());
+			// Description
+			{
+				Rect rect = RectF{vw(descriptionX), vh(descriptionY), vw(descriptionWidth), vh(descriptionHeight)}.asRect();
+				rect.stretched(vw(1.0), 0).draw(Palette::Lightskyblue);
 
+				ScopedIframe2D iframe(rect);
+				drawMultiline(getData()[m_drawer.selected()].description, (size_t)descriptionLines, m_drawer.isStopped(), vh(descriptionFontSize), {0, vh(descriptionDiff)});
+			}
+
+//#define LISTDRAWER_DEBUG
 #ifdef LISTDRAWER_DEBUG
 # define EXPAND(macro)                macro()
 # define STRINGIZE(s)                 #s
 # define CAT(a, b)                    a##b
-# define SLIDER(name, min, max, ybeg) SimpleGUI::Slider(U"{}: {:.2f})"_fmt(CAT(U, #name), name), name, min, max, Vec2{0, ybeg * 50}, 250);
+# define SLIDER(name, min, max, ybeg) SimpleGUI::Slider(U"{}: {:.2f})"_fmt(CAT(U, #name), name), name, min, max, Vec2{0, ybeg * 50}, 300, 400);
+# define LISTDRAWER_VAR_DEFINE        double mutable
 
 			int32 i = 2;
-			SLIDER(titleHeight, 10, 50, i++);
-			SLIDER(authorHeight, 10, 50, i++);
-			SLIDER(descriptionHeight, 0, 100, i++);
-			SLIDER(titleY, 0, 30, i++);
-			SLIDER(authorY, 20, 50, i++);
-			SLIDER(descriptionY, 0, 100, i++);
-			SLIDER(descriptionChars, 75, 200, i++);
+			SLIDER(titleHeight, 0, 100, i++);
+			SLIDER(authorHeight, 0, 100, i++);
+			SLIDER(titleY, 0, 100, i++);
+			SLIDER(authorY, 0, 100, i++);
 			SLIDER(stretchTop, 0, 20, i++);
 			SLIDER(stretchRight, 0, 20, i++);
 			SLIDER(stretchBottom, 0, 20, i++);
 			SLIDER(stretchLeft, 0, 20, i++);
-			SLIDER(scrollPerS, 0.1, 15, i++);
+			SLIDER(scrollVelocity, 100, 500, i++);
+			SLIDER(descriptionX, 0, 100, i++);
+			SLIDER(descriptionY, 50, 100, i++);
+			SLIDER(descriptionWidth, 0, 50, i++);
+			SLIDER(descriptionHeight, 0, 30, i++);
+			SLIDER(descriptionLines, 1, 10, i++);
+			SLIDER(descriptionDiff, 0, 50, i++);
+			SLIDER(descriptionFontSize, 10, 50, i++);
+# undef EXPAND
+# undef STRINGIZE
+# undef CAT
+# undef SLIDER
+#else
+# define LISTDRAWER_VAR_DEFINE const double
 #endif
 		}
 
 	private:
-		tomolatoon::ListDrawer<> drawer;
+		tomolatoon::ListDrawer<> m_drawer;
 
-		LISTDRAWER_VAR_DEFINE titleHeight       = 25;
-		LISTDRAWER_VAR_DEFINE authorHeight      = 20;
-		LISTDRAWER_VAR_DEFINE descriptionHeight = 13.5;
-		LISTDRAWER_VAR_DEFINE titleY            = 4;
-		LISTDRAWER_VAR_DEFINE authorY           = 31;
-		LISTDRAWER_VAR_DEFINE descriptionY      = 60;
-		LISTDRAWER_VAR_DEFINE descriptionChars  = 75;
-		LISTDRAWER_VAR_DEFINE stretchTop        = 0;
-		LISTDRAWER_VAR_DEFINE stretchRight      = 0;
-		LISTDRAWER_VAR_DEFINE stretchBottom     = 0;
-		LISTDRAWER_VAR_DEFINE stretchLeft       = 0;
-		LISTDRAWER_VAR_DEFINE scrollPerS        = 5;
+		LISTDRAWER_VAR_DEFINE titleHeight         = 40;
+		LISTDRAWER_VAR_DEFINE authorHeight        = 35;
+		LISTDRAWER_VAR_DEFINE titleY              = 2.45;
+		LISTDRAWER_VAR_DEFINE authorY             = 47;
+		LISTDRAWER_VAR_DEFINE stretchTop          = 0;
+		LISTDRAWER_VAR_DEFINE stretchRight        = 0;
+		LISTDRAWER_VAR_DEFINE stretchBottom       = 0;
+		LISTDRAWER_VAR_DEFINE stretchLeft         = 0;
+		LISTDRAWER_VAR_DEFINE scrollVelocity      = 250;
+		LISTDRAWER_VAR_DEFINE descriptionX        = 15;
+		LISTDRAWER_VAR_DEFINE descriptionY        = 90;
+		LISTDRAWER_VAR_DEFINE descriptionWidth    = 50;
+		LISTDRAWER_VAR_DEFINE descriptionHeight   = 10;
+		LISTDRAWER_VAR_DEFINE descriptionLines    = 2;
+		LISTDRAWER_VAR_DEFINE descriptionDiff     = 15.5;
+		LISTDRAWER_VAR_DEFINE descriptionFontSize = 25;
+
+#undef LISTDRAWER_VAR_DEFINE
 	};
-
 
 	struct Load : App::Scene
 	{

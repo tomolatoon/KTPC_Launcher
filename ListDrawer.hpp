@@ -67,26 +67,22 @@ namespace tomolatoon
 		}
 
 		template <std::invocable<double, double> Lam>
-		void addAsArray(const Array<Lam>& lam)
+		size_t addAsArray(const Array<Lam>& lam)
 		{
+			size_t size = m_drawables.size();
 			std::ranges::for_each(lam, [&](Lam e) { this->add(std::move(e)); });
+			return size;
 		}
 
-		template <class Head1, class Head2, class... Args>
-		void addAsArgs(Head1&& head1, Head2&& head2, Args&&... args)
+		template <class... Args>
+		size_t addAsArgs(Args&&... args)
 		{
-			add(std::forward<Head1>(head1));
-			add(std::forward<Head2>(head2));
-			addAsArgs(std::forward<Args>(args)...);
+			size_t size = m_drawables.size();
+			(add(std::forward<Args>(args)), ...);
+			return size;
 		}
 
-		template <class Head1>
-		void addAsArgs(Head1&& head)
-		{
-			add(std::forward<Head1>(head));
-		}
-
-		IDrawer& getDrawer(int32 i) const
+		const IDrawer& getDrawer(int32 i) const
 		{
 			return *m_drawables.at(i).get();
 		}
@@ -112,9 +108,47 @@ namespace tomolatoon
 			return m_state;
 		}
 
-		int32 getSelected() const noexcept
+		int32 selected() const noexcept
 		{
 			return m_selected;
+		}
+
+		void selected(int32 selected) noexcept
+		{
+			if (m_drawables.size())
+			{
+				m_selected = selected % m_drawables.size();
+			}
+		}
+
+		/// @brief 前回停止してからの時間[s]
+		double stopTime() const noexcept
+		{
+			// あるフレームの中では同じ値が返されるので OK
+			return Scene::Time() - m_lastStopTime;
+		}
+
+		/// @brief 中央の要素の拡大の割合[0.0, 1.0]
+		double getTransition() const noexcept
+		{
+			return m_toStoppingDiff.transition(EaseOutQuint);
+		}
+
+		/// @brief 中央の要素が最大担っている時かどうか
+		bool isMaximum() const noexcept
+		{
+			return m_toStoppingDiff.isFinish();
+		}
+
+		/// @brief 中央の要素が最大担っている時かどうか
+		bool isMinimum() const noexcept
+		{
+			return m_toStoppingDiff.isStart();
+		}
+
+		bool isStopped() const noexcept
+		{
+			return getState() & (StoppingFirst | Stopping);
 		}
 
 		int32 update(bool isMouseIgnore = false)
@@ -234,16 +268,13 @@ namespace tomolatoon
 			const auto inc = [&](int32 index) { return index + 1 >= m_drawables.size() ? 0 : index + 1; };
 			const auto dec = [&](int32 index) { return index - 1 < 0 ? m_drawables.size() - 1 : index - 1; };
 
-			// 停止してからの時間、停止していなければ -1
-			const auto stopTime = [&]() { return Scene::Time() - m_lastStopTime; };
-
 			// Print << U"m_vel: {}\ndiff:{}\nselected:{}\ncenterY:{}\ncenterRect:{}"_fmt(m_vel, m_diff, m_selected, startY, startRect);
 
 			// 中央のカード
 			{
 				ScopedIframe2D iframe(startRect);
 				//Iframe::Rect().draw(Palette::Azure);
-				m_drawables[m_selected].get()->draw(m_toStoppingDiff.transition(EaseOutQuint), stopTime());
+				m_drawables[m_selected].get()->draw(getTransition(), stopTime());
 			}
 
 			// 上半分のカードたち
@@ -254,7 +285,7 @@ namespace tomolatoon
 				// bl は実際の領域よりも下方向に 1px はみ出していると考えられるので 0 は含まないでおく
 				for (; rect.bl().y > 0; rect.moveBy(0, -m_heightf()), index = dec(index))
 				{
-					ScopedIframe2D iframe(rect);
+					ScopedIframe2D iframe(rect, ScopedIframe2DCropped::No);
 					m_drawables[index].get()->draw(0.0, stopTime());
 				}
 			}
@@ -266,7 +297,7 @@ namespace tomolatoon
 
 				for (; rect.tl().y < Iframe::Height(); rect.moveBy(0, m_heightf()), index = inc(index))
 				{
-					ScopedIframe2D iframe(rect);
+					ScopedIframe2D iframe(rect, ScopedIframe2DCropped::No);
 					m_drawables[index].get()->draw(0.0, stopTime());
 				}
 			}
@@ -290,7 +321,7 @@ namespace tomolatoon
 		CenterF                         m_centerf          = defaultcenterf;
 		double                          m_vel              = 0.0;
 		double                          m_diff             = -(double)m_heightf() / 2;
-		double                          m_lastStopTime     = 0;
+		double                          m_lastStopTime     = Scene::Time();
 		LerpTransition                  m_toStoppingDiff   = {0.5s, 0.25s, 0.0, 0.0};
 		LerpTransition                  m_toStoppingHeight = {0.1s, 0.1s, m_heightf(), m_maxHeightf(m_heightf())};
 		Array<std::shared_ptr<IDrawer>> m_drawables        = {};
