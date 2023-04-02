@@ -434,3 +434,4 @@ FodyWeavers.xsd
 /App/**/*
 !/App/data.schema.json
 !/App/Resource.rc
+!KTPC_luncher.vcxproj.user
