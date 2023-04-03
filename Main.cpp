@@ -33,7 +33,7 @@ namespace tomolatoon
 		{
 			USINGS;
 
-			m_drawer.addAsArray(getData().map([&](const Game& e) {
+			m_drawer.registerDrawableAsArray(true, getData().map([&](const Game& e) {
 				return [&](double per, double stopTime) {
 					//Print << U"{}, {}"_fmt(per, stopTime);
 
@@ -197,7 +197,7 @@ namespace tomolatoon
 			}
 			// 画像
 			{
-				getData()[m_drawer.selected()].icon().resized(31.5_sw).draw(62_sw, 15.5_sh);
+				getData()[m_drawer.selectedDrawableId()].icon().resized(31.5_sw).draw(62_sw, 15.5_sh);
 			}
 			// その他
 			{
@@ -210,10 +210,10 @@ namespace tomolatoon
 				rect.stretched(vw(1.0), 0).draw(Palette::Lightskyblue);
 
 				ScopedIframe2D iframe(rect);
-				drawMultiline(getData()[m_drawer.selected()].description, (size_t)descriptionLines, m_drawer.isStopped(), vh(descriptionFontSize), {0, vh(descriptionDiff)});
+				drawMultiline(getData()[m_drawer.selectedDrawableId()].description, (size_t)descriptionLines, m_drawer.isStopped(), vh(descriptionFontSize), {0, vh(descriptionDiff)});
 			}
 
-//#define LISTDRAWER_DEBUG
+#define LISTDRAWER_DEBUG
 #ifdef LISTDRAWER_DEBUG
 # define EXPAND(macro)                macro()
 # define STRINGIZE(s)                 #s

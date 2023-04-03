@@ -27,34 +27,43 @@ namespace tomolatoon
 	// clang-format on
 	struct ListDrawer
 	{
+		using ID = int32;
+
 		struct IDrawer
 		{
-			virtual void draw(double per, double stopTime) {}
+			virtual void draw(double per, double stopTime) const {}
 
 			virtual ~IDrawer() = default;
 		};
 
-		size_t add(std::shared_ptr<IDrawer>&& drawer)
+		ID registerDrawable(bool isRefPushBack, std::unique_ptr<IDrawer>&& drawer)
 		{
-			m_drawables.push_back(drawer);
-			return m_drawables.size();
+			ID id = m_drawablesDic.size();
+			m_drawablesDic.emplace(id, std::move(drawer));
+
+			if (isRefPushBack)
+			{
+				m_drablesRef.push_back(id);
+			}
+
+			return id;
 		}
 
 		template <std::derived_from<IDrawer> Drawable, class... Args>
-		size_t add(Args&&... args)
+		ID registerDrawable(bool isRefPushBack, Args&&... args)
 		{
-			return this->add(std::make_shared<Drawable>(std::forward<Args>(args)...));
+			return registerDrawable(isRefPushBack, std::make_unique<Drawable>(std::forward<Args>(args)...));
 		}
 
 		template <std::invocable<double, double> Lam>
-		size_t add(Lam lam)
+		ID registerDrawable(bool isRefPushBack, Lam lam)
 		{
 			struct LambdaWrapper : IDrawer
 			{
 				LambdaWrapper(Lam lam) noexcept
 					: lambda(std::move(lam)) {}
 
-				void draw(double per, double stopTime) override
+				void draw(double per, double stopTime) const override
 				{
 					lambda(per, stopTime);
 				}
@@ -63,33 +72,99 @@ namespace tomolatoon
 				Lam lambda;
 			};
 
-			return this->add(std::make_unique<LambdaWrapper>(std::move(lam)));
+			return registerDrawable(isRefPushBack, std::make_unique<LambdaWrapper>(std::move(lam)));
 		}
 
 		template <std::invocable<double, double> Lam>
-		size_t addAsArray(const Array<Lam>& lam)
+		Array<ID> registerDrawableAsArray(bool isRefPushBack, const Array<Lam>& lam)
 		{
-			size_t size = m_drawables.size();
-			std::ranges::for_each(lam, [&](Lam e) { this->add(std::move(e)); });
-			return size;
+			return lam | std::views::transform([&](auto&& e) { return registerDrawable(isRefPushBack, std::move(e)); }) | std::ranges::to<Array<ID>>();
 		}
 
 		template <class... Args>
-		size_t addAsArgs(Args&&... args)
+		Array<ID> registerDrawableAsArgs(bool isRefPushBack, Args&&... args)
 		{
-			size_t size = m_drawables.size();
-			(add(std::forward<Args>(args)), ...);
-			return size;
+			return {add(isRefPushBack, std::forward<Args>(args))...};
 		}
 
-		const IDrawer& getDrawer(int32 i) const
+		bool unregister(ID id)
 		{
-			return *m_drawables.at(i).get();
+			if (m_drawablesDic.contains(id))
+			{
+				m_drawablesDic.erase(m_drawablesDic.find(id));
+
+				return true;
+			}
+			else
+			{
+				return false;
+			}
 		}
 
-		size_t getDrawersSize() const noexcept
+		void pushFrontRef(ID id)
 		{
-			return m_drawables.size();
+			selectedRefIndex(selectedRefIndex() + 1);
+
+			m_drablesRef.push_front(id);
+		}
+
+		void pushBackRef(ID id)
+		{
+			m_drablesRef.push_back(id);
+		}
+
+		// 指定した index の直前に挿入
+		void insertRef(size_t index, ID id)
+		{
+			if (index <= selectedRefIndex())
+			{
+				selectedRefIndex(selectedRefIndex() + 1);
+			}
+
+			m_drablesRef.insert(m_drablesRef.begin() + index, id);
+		}
+
+		void eraseRef(size_t index)
+		{
+			if (index <= selectedRefIndex())
+			{
+				selectedRefIndex(selectedRefIndex() - 1);
+			}
+
+			m_drablesRef.erase(m_drablesRef.begin() + index);
+		}
+
+		size_t sizeRefs() const noexcept
+		{
+			return m_drablesRef.size();
+		}
+
+		size_t selectedRefIndex() const noexcept
+		{
+			return m_selected;
+		}
+
+		void selectedRefIndex(int32 selectedRefIndex) noexcept
+		{
+			if (sizeRefs())
+			{
+				m_selected = selectedRefIndex % sizeRefs();
+			}
+		}
+
+		ID selectedDrawableId() const noexcept
+		{
+			return m_drablesRef[selectedRefIndex()];
+		}
+
+		const IDrawer& drawable(ID i) const
+		{
+			return *(*m_drawablesDic.find(i)).second;
+		}
+
+		const IDrawer& selectedDrawable() const
+		{
+			return drawable(selectedDrawableId());
 		}
 
 		enum State : int16
@@ -106,19 +181,6 @@ namespace tomolatoon
 		State getState() const noexcept
 		{
 			return m_state;
-		}
-
-		int32 selected() const noexcept
-		{
-			return m_selected;
-		}
-
-		void selected(int32 selected) noexcept
-		{
-			if (m_drawables.size())
-			{
-				m_selected = selected % m_drawables.size();
-			}
 		}
 
 		/// @brief 前回停止してからの時間[s]
@@ -151,17 +213,17 @@ namespace tomolatoon
 			return getState() & (StoppingFirst | Stopping);
 		}
 
-		int32 update(bool isMouseIgnore = false)
+		ID update(bool isMouseIgnore = false)
 		{
 			// [0, m_drawables.size() * m_heightf()) に丸める
 			const auto rounding = [&](auto fp) {
 				if (fp < 0.0)
 				{
-					return m_drawables.size() * m_heightf() + Fmod(fp, m_drawables.size() * m_heightf());
+					return sizeRefs() * m_heightf() + Fmod(fp, sizeRefs() * m_heightf());
 				}
 				else
 				{
-					return Fmod(fp, m_drawables.size() * m_heightf());
+					return Fmod(fp, sizeRefs() * m_heightf());
 				}
 			};
 
@@ -222,7 +284,7 @@ namespace tomolatoon
 			break;
 			case ToStoppingFirst:
 			{
-				m_toStoppingDiff.setRange(m_diff, rounding((m_drawables.size() - 1 - m_selected) * m_heightf() + (double)(m_heightf()) / 2));
+				m_toStoppingDiff.setRange(m_diff, rounding((sizeRefs() - 1 - selectedRefIndex()) * m_heightf() + (double)(m_heightf()) / 2));
 				m_vel = 0;
 			}
 				[[fallthrough]];
@@ -250,55 +312,52 @@ namespace tomolatoon
 			}
 
 			// 実際に真ん中に据えるカード分の座標差
-			m_diff     = rounding(m_diff + m_vel * Scene::DeltaTime() + m_toStoppingDiff.deltaValue(EaseOutQuint));
+			m_diff = rounding(m_diff + m_vel * Scene::DeltaTime() + m_toStoppingDiff.deltaValue(EaseOutQuint));
 			// 中央に存在するカードのインデックス
-			m_selected = m_drawables.size() - 1 - static_cast<int32>(m_diff / m_heightf());
+			selectedRefIndex(sizeRefs() - 1 - static_cast<ID>(m_diff / m_heightf()));
 
-			return m_selected;
+			return selectedDrawableId();
 		}
 
 		void draw() const
 		{
 			// startIndex の描画を開始する位置(y座標)
-			double startY    = m_centerf() + m_diff - m_heightf() * (m_drawables.size() - m_selected) - (m_toStoppingHeight.value() - m_heightf()) / 2;
+			double startY    = m_centerf() + m_diff - m_heightf() * (sizeRefs() - selectedRefIndex()) - (m_toStoppingHeight.value() - m_heightf()) / 2;
 			// startIndex の描画位置(Rect)
 			Rect   startRect = RectF{0.0, startY, static_cast<double>(Iframe::Width()), m_toStoppingHeight.value()}.asRect();
 
-			// [0, m_drawables.size()) に丸めながら増減させる
-			const auto inc = [&](int32 index) { return index + 1 >= m_drawables.size() ? 0 : index + 1; };
-			const auto dec = [&](int32 index) { return index - 1 < 0 ? m_drawables.size() - 1 : index - 1; };
-
-			// Print << U"m_vel: {}\ndiff:{}\nselected:{}\ncenterY:{}\ncenterRect:{}"_fmt(m_vel, m_diff, m_selected, startY, startRect);
+			// [0, sizeRefs()) に丸めながら増減させる
+			const auto inc = [&](int32 index) { return index + 1 >= sizeRefs() ? 0 : index + 1; };
+			const auto dec = [&](int32 index) { return index - 1 < 0 ? sizeRefs() - 1 : index - 1; };
 
 			// 中央のカード
 			{
 				ScopedIframe2D iframe(startRect);
-				//Iframe::Rect().draw(Palette::Azure);
-				m_drawables[m_selected].get()->draw(getTransition(), stopTime());
+				selectedDrawable().draw(getTransition(), stopTime());
 			}
 
 			// 上半分のカードたち
 			{
-				int32 index = dec(m_selected);
+				int32 index = dec(selectedRefIndex());
 				Rect  rect  = Rect{startRect.tl().movedBy(0, -m_heightf()), Iframe::Width(), m_heightf()};
 
 				// bl は実際の領域よりも下方向に 1px はみ出していると考えられるので 0 は含まないでおく
 				for (; rect.bl().y > 0; rect.moveBy(0, -m_heightf()), index = dec(index))
 				{
 					ScopedIframe2D iframe(rect, ScopedIframe2DCropped::No);
-					m_drawables[index].get()->draw(0.0, stopTime());
+					drawable(index).draw(0.0, stopTime());
 				}
 			}
 
 			// 下半分のカードたち
 			{
-				int32 index = inc(m_selected);
+				int32 index = inc(selectedRefIndex());
 				Rect  rect  = Rect{startRect.bl(), Iframe::Width(), m_heightf()};
 
 				for (; rect.tl().y < Iframe::Height(); rect.moveBy(0, m_heightf()), index = inc(index))
 				{
 					ScopedIframe2D iframe(rect, ScopedIframe2DCropped::No);
-					m_drawables[index].get()->draw(0.0, stopTime());
+					drawable(index).draw(0.0, stopTime());
 				}
 			}
 		}
@@ -314,17 +373,18 @@ namespace tomolatoon
 	private:
 		using Int32Func = int32 (*)();
 
-		State                           m_state            = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
-		int32                           m_selected         = 0;
-		HeightF                         m_heightf          = defaultHeightf;
-		MaxHeightF                      m_maxHeightf       = defaultmaxheightf;
-		CenterF                         m_centerf          = defaultcenterf;
-		double                          m_vel              = 0.0;
-		double                          m_diff             = -(double)m_heightf() / 2;
-		double                          m_lastStopTime     = Scene::Time();
-		LerpTransition                  m_toStoppingDiff   = {0.5s, 0.25s, 0.0, 0.0};
-		LerpTransition                  m_toStoppingHeight = {0.1s, 0.1s, m_heightf(), m_maxHeightf(m_heightf())};
-		Array<std::shared_ptr<IDrawer>> m_drawables        = {};
+		State                                   m_state            = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
+		ID                                      m_selected         = 0;
+		HeightF                                 m_heightf          = defaultHeightf;
+		MaxHeightF                              m_maxHeightf       = defaultmaxheightf;
+		CenterF                                 m_centerf          = defaultcenterf;
+		double                                  m_vel              = 0.0;
+		double                                  m_diff             = -(double)m_heightf() / 2;
+		double                                  m_lastStopTime     = Scene::Time();
+		LerpTransition                          m_toStoppingDiff   = {0.5s, 0.25s, 0.0, 0.0};
+		LerpTransition                          m_toStoppingHeight = {0.1s, 0.1s, m_heightf(), m_maxHeightf(m_heightf())};
+		HashTable<ID, std::unique_ptr<IDrawer>> m_drawablesDic     = {};
+		Array<ID>                               m_drablesRef       = {};
 	};
 
 	template <std::invocable<> HeightF, std::invocable<int32> MaxHeightF, std::invocable<> CenterF>
