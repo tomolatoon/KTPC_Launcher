@@ -2,6 +2,12 @@
 
 #include <optional>
 
+#define HSV_(h, s, v)     \
+ HSV                      \
+ {                        \
+  h, s / 100.0, v / 100.0 \
+ }
+
 namespace tomolatoon
 {
 	template <class T>
@@ -16,4 +22,6 @@ namespace tomolatoon
 	{
 		return -1 * Sign(d);
 	}
+
+	bool isURL(FilePathView fp) noexcept;
 } // namespace tomolatoon

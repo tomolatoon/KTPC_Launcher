@@ -24,6 +24,98 @@ namespace tomolatoon
 
 	using App = SceneManager<String, Array<Game>>;
 
+	struct Button
+	{
+		Button(RectF rect, String title = U"Button")
+			: m_rect(rect)
+			, m_title(title)
+		{}
+
+		// update を呼び出すと前フレームの状態を取得出来るようになる
+		Button& update(Optional<RectF> newRegion = none)
+		{
+			m_clicked  = m_rect.leftClicked();
+			m_pressed  = m_rect.leftPressed();
+			m_released = m_rect.leftReleased();
+			m_rect     = newRegion.value_or(m_rect);
+
+			return *this;
+		}
+
+		const String& title() const noexcept
+		{
+			return m_title;
+		}
+
+		Button& title(const String& title)
+		{
+			m_title = title;
+			return *this;
+		}
+
+		bool is_clicked() const noexcept
+		{
+			return m_clicked;
+		}
+
+		bool is_pressed() const noexcept
+		{
+			return m_pressed;
+		}
+
+		bool is_released() const noexcept
+		{
+			return m_released;
+		}
+
+		const RectF& region() const noexcept
+		{
+			return m_rect;
+		}
+
+		void draw(const Font& font = FontAsset(U"Semi")) const
+		{
+			const auto frame       = Units::vh(0.6);
+			const auto frameBottom = Units::vh(0.8) - frame;
+
+			const auto whiteFrame       = Units::vh(0.8);
+			const auto whiteFrameBottom = Units::vh(0.6);
+
+			const auto roundOuter = Units::vh(1);
+			const auto roundInner = Units::vh(0.75);
+
+			const auto innerRect =
+				m_rect.rounded(roundOuter)
+					// 縁
+					.stretched(-frame)
+					.drawFrame(frame, HSV_(240, 58, 43))
+					.stretched(0, 0, -frameBottom, 0)
+					.drawFrame(frameBottom, HSV_(240, 58, 43))
+					// 白
+					.draw(HSV_(0, 0, 100))
+					// 内側
+					.rect.asRect()
+					.rounded(roundInner)
+					.stretched(-whiteFrame, -whiteFrame, -whiteFrameBottom, -whiteFrame)
+					.draw(HSV_(168, 29, 100));
+
+			font(title()).drawAt(innerRect.h * 0.8, innerRect.center());
+
+			if (m_rect.mouseOver())
+			{
+				const ScopedColorMul2D colorMul{ColorF(1.0, 1.0, 1.0, 1.0)};
+				m_rect.draw(Color(31, 38, 115, 20));
+			}
+		}
+
+	private:
+		RectF  m_rect     = {};
+		bool   m_clicked  = false;
+		bool   m_pressed  = false;
+		bool   m_released = false;
+		String m_title    = U"Button";
+	};
+
 	struct Main : App::Scene
 	{
 		inline static constexpr double additionalHiddenTime = 1.0;
@@ -179,6 +271,20 @@ namespace tomolatoon
 			{
 				m_drawer.update(RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver());
 			}
+			// ボタンの類
+			{
+				if (m_play.update(RectF{sw(playX), sh(playY), sw(playW), sh(playH)}.asRect()).is_clicked())
+				{
+					if (auto&& target = getData()[m_drawer.selectedDrawableId()].exe; isURL(target))
+					{
+						System::LaunchBrowser(target);
+					}
+					else
+					{
+						System::LaunchFile(target);
+					}
+				}
+			}
 		}
 
 		void draw() const override
@@ -212,8 +318,12 @@ namespace tomolatoon
 				ScopedIframe2D iframe(rect);
 				drawMultiline(getData()[m_drawer.selectedDrawableId()].description, (size_t)descriptionLines, m_drawer.isStopped(), vh(descriptionFontSize), {0, vh(descriptionDiff)});
 			}
+			// ボタンの類
+			{
+				m_play.draw();
+			}
 
-#define LISTDRAWER_DEBUG
+//#define LISTDRAWER_DEBUG
 #ifdef LISTDRAWER_DEBUG
 # define EXPAND(macro)                macro()
 # define STRINGIZE(s)                 #s
@@ -238,6 +348,10 @@ namespace tomolatoon
 			SLIDER(descriptionLines, 1, 10, i++);
 			SLIDER(descriptionDiff, 0, 50, i++);
 			SLIDER(descriptionFontSize, 10, 50, i++);
+			SLIDER(playX, 50, 100, i++);
+			SLIDER(playY, 75, 100, i++);
+			SLIDER(playW, 10, 50, i++);
+			SLIDER(playH, 10, 50, i++);
 # undef EXPAND
 # undef STRINGIZE
 # undef CAT
@@ -250,6 +364,11 @@ namespace tomolatoon
 	private:
 		tomolatoon::ListDrawer<> m_drawer;
 
+		Button m_play = {
+			RectF{Units::sw(playX), Units::sh(playY), Units::sw(playW), Units::sh(playH)},
+			U"Play"
+        };
+
 		LISTDRAWER_VAR_DEFINE titleHeight         = 40;
 		LISTDRAWER_VAR_DEFINE authorHeight        = 35;
 		LISTDRAWER_VAR_DEFINE titleY              = 2.45;
@@ -259,13 +378,17 @@ namespace tomolatoon
 		LISTDRAWER_VAR_DEFINE stretchBottom       = 0;
 		LISTDRAWER_VAR_DEFINE stretchLeft         = 0;
 		LISTDRAWER_VAR_DEFINE scrollVelocity      = 250;
-		LISTDRAWER_VAR_DEFINE descriptionX        = 15;
+		LISTDRAWER_VAR_DEFINE descriptionX        = 16;
 		LISTDRAWER_VAR_DEFINE descriptionY        = 90;
-		LISTDRAWER_VAR_DEFINE descriptionWidth    = 50;
+		LISTDRAWER_VAR_DEFINE descriptionWidth    = 42;
 		LISTDRAWER_VAR_DEFINE descriptionHeight   = 10;
 		LISTDRAWER_VAR_DEFINE descriptionLines    = 2;
 		LISTDRAWER_VAR_DEFINE descriptionDiff     = 15.5;
 		LISTDRAWER_VAR_DEFINE descriptionFontSize = 25;
+		LISTDRAWER_VAR_DEFINE playX               = 77.5;
+		LISTDRAWER_VAR_DEFINE playY               = 87;
+		LISTDRAWER_VAR_DEFINE playW               = 17.5;
+		LISTDRAWER_VAR_DEFINE playH               = 11;
 
 #undef LISTDRAWER_VAR_DEFINE
 	};
@@ -320,6 +443,8 @@ void Main()
 
 	Window::Resize(1755, 810, Centering::Yes);
 	Scene::SetResizeMode(ResizeMode::Actual);
+
+	Scene::SetBackground(HSV_(232, 51, 27));
 
 	tomolatoon::App manager;
 	manager.add<tomolatoon::Load>(U"Load");

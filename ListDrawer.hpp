@@ -148,8 +148,19 @@ namespace tomolatoon
 		{
 			if (sizeRefs())
 			{
+				m_prevSelected = m_selected;
 				m_selected = selectedRefIndex % sizeRefs();
 			}
+		}
+
+		size_t prevSelectedRefIndex() const noexcept
+		{
+			return m_prevSelected;
+		}
+
+		bool isChangedSelectedRefIndex() const noexcept
+		{
+			return prevSelectedRefIndex() != selectedRefIndex();
 		}
 
 		ID selectedDrawableId() const noexcept
@@ -374,7 +385,8 @@ namespace tomolatoon
 		using Int32Func = int32 (*)();
 
 		State                                   m_state            = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
-		ID                                      m_selected         = 0;
+		int32                                   m_selected         = 0;
+		int32                                   m_prevSelected     = 0;
 		HeightF                                 m_heightf          = defaultHeightf;
 		MaxHeightF                              m_maxHeightf       = defaultmaxheightf;
 		CenterF                                 m_centerf          = defaultcenterf;
