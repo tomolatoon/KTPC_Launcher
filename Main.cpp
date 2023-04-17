@@ -73,7 +73,7 @@ namespace tomolatoon
 			return m_rect;
 		}
 
-		void draw(const Font& font = FontAsset(U"Semi")) const
+		void draw(const Font& font = FontAsset(U"Medium")) const
 		{
 			const auto frame       = Units::vh(0.6);
 			const auto frameBottom = Units::vh(0.8) - frame;
@@ -97,14 +97,13 @@ namespace tomolatoon
 					.rect.asRect()
 					.rounded(roundInner)
 					.stretched(-whiteFrame, -whiteFrame, -whiteFrameBottom, -whiteFrame)
-					.draw(HSV_(168, 29, 100));
+					.draw(Arg::top = HSV_(106, 35, 97), Arg::bottom = HSV_(157, 54, 96));
 
-			font(title()).drawAt(innerRect.h * 0.8, innerRect.center());
+			font(title()).drawAt(innerRect.h * 0.7, innerRect.center().movedBy(0, -innerRect.h * 0.025), HSV_(232, 51, 27));
 
 			if (m_rect.mouseOver())
 			{
-				const ScopedColorMul2D colorMul{ColorF(1.0, 1.0, 1.0, 1.0)};
-				m_rect.draw(Color(31, 38, 115, 20));
+				innerRect.draw(Color(31, 38, 115, 20));
 			}
 		}
 
@@ -133,12 +132,14 @@ namespace tomolatoon
 					auto if_2 = Iframe::RectAtScene();
 
 					// Background
-					Iframe::Rect().draw(e.background);
+					//Iframe::Rect().draw(e.background);
+					Iframe::Rect().draw(ColorF{backgroundCardR, backgroundCardG, backgroundCardB, backgroundCardAlpha});
 
 					// Icon
 					e.icon().resized(Iframe::Height() * 0.8).drawAt(10_vw, Iframe::Center().y);
 
-					RectF{19_vw, 70_vh, 79.5_vw, 100_vh}.draw(Palette::Lightgrey);
+					//
+					//RectF{19_vw, 70_vh, 79.5_vw, 100_vh}.draw(Palette::Lightgrey);
 
 					{
 						ScopedIframe2D iframe{
@@ -148,8 +149,8 @@ namespace tomolatoon
 								.asRect()
                         };
 
-						drawSingleline(e.title, per == 1.0, vh(titleHeight), 1.5_vw, vh(titleY));
-						drawSingleline(e.author, per == 1.0, vh(authorHeight), 2.5_vw, vh(authorY));
+						drawSingleline(e.title, per == 1.0 && stopTime > 0.5, vh(titleHeight), 1.5_vw, vh(titleY), -0.5);
+						drawSingleline(e.author, per == 1.0 && stopTime > 0.5, vh(authorHeight), 2.0_vw, vh(authorY), -0.5);
 					}
 
 					//Iframe::Rect().DEBUGDRAW;
@@ -172,14 +173,14 @@ namespace tomolatoon
 			return -virtualDiff < -textWidth ? -virtualDiff + additionalHiddenTime * scrollVel + textWidth + regionWidth * lines : -virtualDiff;
 		}
 
-		void drawSingleline(const String& string, const bool enableScrooll, const double fontSize, const double x, const double y)
+		void drawSingleline(const String& string, const bool enableScrooll, const double fontSize, const double x, const double y, const double stopTimeDiff = 0.0)
 		{
 			if (enableScrooll)
 			{
 				const DrawableText text   = FontAsset(U"Black")(string);
 				const RectF        region = text.region(fontSize, x, y);
 
-				const double xDiff = region.w > Iframe::Width() ? calDiff(m_drawer.stopTime(), additionalHiddenTime, scrollVelocity, region.w, Iframe::Width(), 1) : 0;
+				const double xDiff = region.w > Iframe::Width() ? calDiff(m_drawer.stopTime() + stopTimeDiff, additionalHiddenTime, scrollVelocity, region.w, Iframe::Width(), 1) : 0;
 				text.draw(fontSize, x + xDiff, y);
 			}
 			else
@@ -189,12 +190,12 @@ namespace tomolatoon
 		}
 
 		/// @brief スクロールもする複数行に渡る文字列表示を行います。ScopedIframe を使って描画領域を制限のこと。
-		void drawMultiline(const String& string, const size_t lines, const bool enableScrooll, const double fontSize, const Vec2 firstPos) const
+		void drawMultiline(const String& string, const size_t lines, const bool enableScrooll, const double fontSize, const Vec2 firstPos, const double stopTimeDiff = 0.0) const
 		{
 			// x軸は左上を0として、右方向へ軸を張り、右端まで来たら改行して lineHeight 下がったところに継続し、右下の方でこれ以上行を取れない所まで継続する。
 
 			const double width            = Iframe::Width();
-			const RectF  singleLineRegion = FontAsset(U"Semi")(string).region(fontSize);
+			const RectF  singleLineRegion = FontAsset(U"Medium")(string).region(fontSize);
 			const double lineHeight       = singleLineRegion.h;
 			const double stringAllWidth   = singleLineRegion.w;
 			const double widthCapacity    = width * lines;
@@ -227,7 +228,7 @@ namespace tomolatoon
 				}
 			};
 
-			const double startX    = enableScrooll && stringAllWidth > widthCapacity ? calDiff(m_drawer.stopTime(), additionalHiddenTime, scrollVelocity, stringAllWidth, width, lines) : 0;
+			const double startX    = enableScrooll && stringAllWidth > widthCapacity ? calDiff(m_drawer.stopTime() + stopTimeDiff, additionalHiddenTime, scrollVelocity, stringAllWidth, width, lines) : 0;
 			const auto   graphemes = string | tomolatoon::views::graphme;
 			auto         it        = std::ranges::begin(graphemes);
 			auto         end       = std::ranges::end(graphemes);
@@ -235,7 +236,7 @@ namespace tomolatoon
 			{
 				const String& grapheme = *it;
 
-				DrawableText text   = FontAsset(U"Semi")(grapheme);
+				DrawableText text   = FontAsset(U"Medium")(grapheme);
 				RectF        region = text.region(fontSize);
 
 				auto [f, s] = xToDrawPos(x, region.w);
@@ -269,6 +270,7 @@ namespace tomolatoon
 
 			// List
 			{
+				ScopedIframe2D iframe(RectF(sliderStart, 0, 44_sw, 100_sh).asRect());
 				m_drawer.update(RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver());
 			}
 			// ボタンの類
@@ -294,16 +296,47 @@ namespace tomolatoon
 
 			USINGS;
 
-			const auto sliderStart = 15_sw;
+			auto&& prevStoppedSelected = getOpt(m_drawer.prevStoppedSelectedDrawableID(), -1, 0);
+			auto&& prevStoppedIcon     = getData()[prevStoppedSelected].icon();
+			auto&& selectedIcon        = getData()[m_drawer.selectedDrawableId()].icon();
 
+			// 背景
+			{
+				//iconResized.draw(ColorF{backgroundR, backgroundG, backgroundB, backgroundAlpha});
+
+				int32  max         = Max(Scene::Width(), Scene::Height());
+				auto&& iconResized = selectedIcon.resized(max);
+
+				// 明らかに効率的ではないが無視（プロファイラーの警告は無効化）
+				// 強力なぼかし
+				const RenderTexture buffer1{iconResized.size.asPoint()};
+				const RenderTexture to1{iconResized.size.asPoint()};
+
+				const RenderTexture buffer4{iconResized.size.asPoint() / 4};
+				const RenderTexture to4{iconResized.size.asPoint() / 4};
+
+				const RenderTexture buffer8{iconResized.size.asPoint() / 8};
+				const RenderTexture to8{iconResized.size.asPoint() / 8};
+
+				Shader::GaussianBlur(iconResized, buffer1, to1);
+				Shader::Downsample(to1, to4);
+				Shader::GaussianBlur(to4, buffer4, to4);
+				Shader::Downsample(to4, to8);
+				Shader::GaussianBlur(to8, buffer8, to8);
+
+				to8.resized(max).draw(ColorF{backgroundR, backgroundG, backgroundB, backgroundAlpha});
+
+				// 上からピンクを描画
+				Iframe::Rect().draw(ColorF{backgroundAddR, backgroundAddG, backgroundAddB, backgroundAddAlpha});
+			}
 			// List
 			{
 				ScopedIframe2D iframe(RectF(sliderStart, 0, 44_sw, 100_sh).asRect());
 				m_drawer.draw();
 			}
-			// 画像
+			// icon
 			{
-				getData()[m_drawer.selectedDrawableId()].icon().resized(31.5_sw).draw(62_sw, 15.5_sh);
+				prevStoppedIcon.resized(31.5_sw).draw(62_sw, 15.5_sh);
 			}
 			// その他
 			{
@@ -316,14 +349,14 @@ namespace tomolatoon
 				rect.stretched(vw(1.0), 0).draw(Palette::Lightskyblue);
 
 				ScopedIframe2D iframe(rect);
-				drawMultiline(getData()[m_drawer.selectedDrawableId()].description, (size_t)descriptionLines, m_drawer.isStopped(), vh(descriptionFontSize), {0, vh(descriptionDiff)});
+				drawMultiline(getData()[prevStoppedSelected].description, (size_t)descriptionLines, m_drawer.isStopped() && m_drawer.stopTime() > 0.5, vh(descriptionFontSize), {0, vh(descriptionDiff)}, -0.5);
 			}
 			// ボタンの類
 			{
 				m_play.draw();
 			}
 
-//#define LISTDRAWER_DEBUG
+#define LISTDRAWER_DEBUG
 #ifdef LISTDRAWER_DEBUG
 # define EXPAND(macro)                macro()
 # define STRINGIZE(s)                 #s
@@ -332,7 +365,7 @@ namespace tomolatoon
 # define LISTDRAWER_VAR_DEFINE        double mutable
 
 			int32 i = 2;
-			SLIDER(titleHeight, 0, 100, i++);
+			/*SLIDER(titleHeight, 0, 100, i++);
 			SLIDER(authorHeight, 0, 100, i++);
 			SLIDER(titleY, 0, 100, i++);
 			SLIDER(authorY, 0, 100, i++);
@@ -340,18 +373,30 @@ namespace tomolatoon
 			SLIDER(stretchRight, 0, 20, i++);
 			SLIDER(stretchBottom, 0, 20, i++);
 			SLIDER(stretchLeft, 0, 20, i++);
-			SLIDER(scrollVelocity, 100, 500, i++);
-			SLIDER(descriptionX, 0, 100, i++);
+			SLIDER(scrollVelocity, 100, 500, i++); /**/
+			/* SLIDER(descriptionX, 0, 100, i++);
 			SLIDER(descriptionY, 50, 100, i++);
 			SLIDER(descriptionWidth, 0, 50, i++);
 			SLIDER(descriptionHeight, 0, 30, i++);
 			SLIDER(descriptionLines, 1, 10, i++);
 			SLIDER(descriptionDiff, 0, 50, i++);
-			SLIDER(descriptionFontSize, 10, 50, i++);
-			SLIDER(playX, 50, 100, i++);
+			SLIDER(descriptionFontSize, 10, 50, i++); /**/
+			/* SLIDER(playX, 50, 100, i++);
 			SLIDER(playY, 75, 100, i++);
 			SLIDER(playW, 10, 50, i++);
-			SLIDER(playH, 10, 50, i++);
+			SLIDER(playH, 10, 50, i++);/**/
+			SLIDER(backgroundR, 0, 1, i++);
+			SLIDER(backgroundG, 0, 1, i++);
+			SLIDER(backgroundB, 0, 1, i++);
+			SLIDER(backgroundAlpha, 0, 1, i++);
+			SLIDER(backgroundAddR, 0, 1, i++);
+			SLIDER(backgroundAddG, 0, 1, i++);
+			SLIDER(backgroundAddB, 0, 1, i++);
+			SLIDER(backgroundAddAlpha, 0, 1, i++);
+			SLIDER(backgroundCardR, 0, 1, i++);
+			SLIDER(backgroundCardG, 0, 1, i++);
+			SLIDER(backgroundCardB, 0, 1, i++);
+			SLIDER(backgroundCardAlpha, 0, 1, i++);
 # undef EXPAND
 # undef STRINGIZE
 # undef CAT
@@ -368,6 +413,8 @@ namespace tomolatoon
 			RectF{Units::sw(playX), Units::sh(playY), Units::sw(playW), Units::sh(playH)},
 			U"Play"
         };
+
+		const double sliderStart = Units::sw(15);
 
 		LISTDRAWER_VAR_DEFINE titleHeight         = 40;
 		LISTDRAWER_VAR_DEFINE authorHeight        = 35;
@@ -389,6 +436,18 @@ namespace tomolatoon
 		LISTDRAWER_VAR_DEFINE playY               = 87;
 		LISTDRAWER_VAR_DEFINE playW               = 17.5;
 		LISTDRAWER_VAR_DEFINE playH               = 11;
+		LISTDRAWER_VAR_DEFINE backgroundR         = 1;
+		LISTDRAWER_VAR_DEFINE backgroundG         = 0.85;
+		LISTDRAWER_VAR_DEFINE backgroundB         = 0.85;
+		LISTDRAWER_VAR_DEFINE backgroundAlpha     = 0.40;
+		LISTDRAWER_VAR_DEFINE backgroundAddR      = 0.65;
+		LISTDRAWER_VAR_DEFINE backgroundAddG      = 0.50;
+		LISTDRAWER_VAR_DEFINE backgroundAddB      = 0.75;
+		LISTDRAWER_VAR_DEFINE backgroundAddAlpha  = 0.40;
+		LISTDRAWER_VAR_DEFINE backgroundCardR     = 0.45;
+		LISTDRAWER_VAR_DEFINE backgroundCardG     = 0.40;
+		LISTDRAWER_VAR_DEFINE backgroundCardB     = 0.60;
+		LISTDRAWER_VAR_DEFINE backgroundCardAlpha = 0.70;
 
 #undef LISTDRAWER_VAR_DEFINE
 	};
@@ -432,19 +491,27 @@ decltype(auto) as_clref(auto&& t)
 
 void Main()
 {
+	// 毎フレーム作ってると怒られるやつを無効化するやつ
+	// あんまり良くないけどしらん
+	Profiler::EnableAssetCreationWarning(false);
+
 	const int32 baseFontSize = System::EnumerateMonitors()[System::GetCurrentMonitorIndex()].fullscreenResolution.y / 15;
 
+	FontAsset::Register(U"Thin", baseFontSize, Typeface::Mplus_Thin);
+	FontAsset::Register(U"Regular", baseFontSize, Typeface::Mplus_Regular);
+	FontAsset::Register(U"Medium", baseFontSize, Typeface::Mplus_Medium);
+	FontAsset::Register(U"Bold", baseFontSize, Typeface::Mplus_Bold);
 	FontAsset::Register(U"Black", baseFontSize, Typeface::Mplus_Black);
-	FontAsset::Register(U"Semi", baseFontSize, Typeface::Mplus_Bold);
 	FontAsset::Register(U"Emoji", baseFontSize, Typeface::ColorEmoji);
 
+	FontAsset(U"Thin").addFallback(as_clref(FontAsset(U"Emoji")));
+	FontAsset(U"Regular").addFallback(as_clref(FontAsset(U"Emoji")));
+	FontAsset(U"Medium").addFallback(as_clref(FontAsset(U"Emoji")));
+	FontAsset(U"Bold").addFallback(as_clref(FontAsset(U"Emoji")));
 	FontAsset(U"Black").addFallback(as_clref(FontAsset(U"Emoji")));
-	FontAsset(U"Semi").addFallback(as_clref(FontAsset(U"Emoji")));
 
 	Window::Resize(1755, 810, Centering::Yes);
 	Scene::SetResizeMode(ResizeMode::Actual);
-
-	Scene::SetBackground(HSV_(232, 51, 27));
 
 	tomolatoon::App manager;
 	manager.add<tomolatoon::Load>(U"Load");

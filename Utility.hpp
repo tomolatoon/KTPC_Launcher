@@ -2,6 +2,8 @@
 
 #include <optional>
 
+#include "Settings.hpp"
+
 #define HSV_(h, s, v)     \
  HSV                      \
  {                        \
@@ -24,4 +26,13 @@ namespace tomolatoon
 	}
 
 	bool isURL(FilePathView fp) noexcept;
+
+	template <class T, std::equality_comparable_with<T> U, std::convertible_to<T> V>
+	T getOpt(T&& val, const U& error, V&& insted) noexcept(noexcept(val == error))
+	{
+		if (val == error)
+			return std::forward<V>(insted);
+		else
+			return std::forward<T>(val);
+	}
 } // namespace tomolatoon

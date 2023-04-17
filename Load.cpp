@@ -7,7 +7,7 @@ namespace tomolatoon
 		JSON          settings;
 		JSONValidator validator;
 
-		Array<Game>   games;
+		Array<Game> games;
 
 		do {
 			if ((validator = JSONValidator::Load(U"./data.schema.json")).isEmpty())
@@ -50,7 +50,10 @@ namespace tomolatoon
 			}
 			else
 			{
-				std::ranges::for_each(settings[U"games"], [&](auto&& item) { auto&& [key, game] = item; games.push_back(Game{game, jsonPath}); });
+				std::ranges::for_each(settings[U"games"], [&](auto&& item) {
+					auto&& [key, game] = item;
+					games.push_back(Game{game, jsonPath});
+				});
 			}
 		} while (false);
 

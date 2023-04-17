@@ -27,6 +27,7 @@ namespace tomolatoon
 	// clang-format on
 	struct ListDrawer
 	{
+		// -1 は無効値
 		using ID = int32;
 
 		struct IDrawer
@@ -43,7 +44,7 @@ namespace tomolatoon
 
 			if (isRefPushBack)
 			{
-				m_drablesRef.push_back(id);
+				m_drawableRefs.push_back(id);
 			}
 
 			return id;
@@ -105,12 +106,12 @@ namespace tomolatoon
 		{
 			selectedRefIndex(selectedRefIndex() + 1);
 
-			m_drablesRef.push_front(id);
+			m_drawableRefs.push_front(id);
 		}
 
 		void pushBackRef(ID id)
 		{
-			m_drablesRef.push_back(id);
+			m_drawableRefs.push_back(id);
 		}
 
 		// 指定した index の直前に挿入
@@ -121,7 +122,7 @@ namespace tomolatoon
 				selectedRefIndex(selectedRefIndex() + 1);
 			}
 
-			m_drablesRef.insert(m_drablesRef.begin() + index, id);
+			m_drawableRefs.insert(m_drawableRefs.begin() + index, id);
 		}
 
 		void eraseRef(size_t index)
@@ -131,12 +132,18 @@ namespace tomolatoon
 				selectedRefIndex(selectedRefIndex() - 1);
 			}
 
-			m_drablesRef.erase(m_drablesRef.begin() + index);
+			m_drawableRefs.erase(m_drawableRefs.begin() + index);
 		}
+
+		// Ref はカードを描画する関数オブジェクトの参照のこと
+		// Refs は Ref の配列のこと
+		// RefIndex は Refs の配列におけるインデックスのこと
+		// selected は現在中央にある Ref の配列におけるインデックスのこと
+		// ID は Ref に対応する関数オブジェクトの ID のこと（登録時に返されている ID）
 
 		size_t sizeRefs() const noexcept
 		{
-			return m_drablesRef.size();
+			return m_drawableRefs.size();
 		}
 
 		size_t selectedRefIndex() const noexcept
@@ -149,7 +156,7 @@ namespace tomolatoon
 			if (sizeRefs())
 			{
 				m_prevSelected = m_selected;
-				m_selected = selectedRefIndex % sizeRefs();
+				m_selected     = selectedRefIndex % sizeRefs();
 			}
 		}
 
@@ -158,14 +165,31 @@ namespace tomolatoon
 			return m_prevSelected;
 		}
 
+		size_t prevStoppedSelectedDrawableID() const noexcept
+		{
+			return m_prevStoppedSelectedID;
+		}
+
 		bool isChangedSelectedRefIndex() const noexcept
 		{
 			return prevSelectedRefIndex() != selectedRefIndex();
 		}
 
+		ID refIndexToDrawableId(size_t index) const noexcept
+		{
+			if (m_drawableRefs.contains(index))
+			{
+				return m_drawableRefs[selectedRefIndex()];
+			}
+			else
+			{
+				return -1;
+			}
+		}
+
 		ID selectedDrawableId() const noexcept
 		{
-			return m_drablesRef[selectedRefIndex()];
+			return refIndexToDrawableId(selectedRefIndex());
 		}
 
 		const IDrawer& drawable(ID i) const
@@ -296,7 +320,8 @@ namespace tomolatoon
 			case ToStoppingFirst:
 			{
 				m_toStoppingDiff.setRange(m_diff, rounding((sizeRefs() - 1 - selectedRefIndex()) * m_heightf() + (double)(m_heightf()) / 2));
-				m_vel = 0;
+				m_vel                   = 0;
+				m_prevStoppedSelectedID = selectedDrawableId();
 			}
 				[[fallthrough]];
 			case ToStopping:
@@ -333,9 +358,10 @@ namespace tomolatoon
 		void draw() const
 		{
 			// startIndex の描画を開始する位置(y座標)
-			double startY    = m_centerf() + m_diff - m_heightf() * (sizeRefs() - selectedRefIndex()) - (m_toStoppingHeight.value() - m_heightf()) / 2;
+			const double startY = m_centerf() + Fmod(m_diff - 1, m_heightf()) - m_heightf() - (m_toStoppingHeight.value() - m_heightf()) / 2;
+
 			// startIndex の描画位置(Rect)
-			Rect   startRect = RectF{0.0, startY, static_cast<double>(Iframe::Width()), m_toStoppingHeight.value()}.asRect();
+			const Rect startRect = RectF{0.0, startY, Iframe::Width(), m_toStoppingHeight.value()}.asRect();
 
 			// [0, sizeRefs()) に丸めながら増減させる
 			const auto inc = [&](int32 index) { return index + 1 >= sizeRefs() ? 0 : index + 1; };
@@ -353,7 +379,7 @@ namespace tomolatoon
 				Rect  rect  = Rect{startRect.tl().movedBy(0, -m_heightf()), Iframe::Width(), m_heightf()};
 
 				// bl は実際の領域よりも下方向に 1px はみ出していると考えられるので 0 は含まないでおく
-				for (; rect.bl().y > 0; rect.moveBy(0, -m_heightf()), index = dec(index))
+				for (; rect.bottomY() > 0; rect.moveBy(0, -m_heightf()), index = dec(index))
 				{
 					ScopedIframe2D iframe(rect, ScopedIframe2DCropped::No);
 					drawable(index).draw(0.0, stopTime());
@@ -365,7 +391,7 @@ namespace tomolatoon
 				int32 index = inc(selectedRefIndex());
 				Rect  rect  = Rect{startRect.bl(), Iframe::Width(), m_heightf()};
 
-				for (; rect.tl().y < Iframe::Height(); rect.moveBy(0, m_heightf()), index = inc(index))
+				for (; rect.topY() < Iframe::Height(); rect.moveBy(0, m_heightf()), index = inc(index))
 				{
 					ScopedIframe2D iframe(rect, ScopedIframe2DCropped::No);
 					drawable(index).draw(0.0, stopTime());
@@ -379,10 +405,14 @@ namespace tomolatoon
 			: m_heightf(heightf)
 			, m_maxHeightf(maxheightf)
 			, m_centerf(centerf)
-		{}
+		{
+			update();
+		}
 
 	private:
 		using Int32Func = int32 (*)();
+
+		ID m_prevStoppedSelectedID = -1;
 
 		State                                   m_state            = State::Coasting; // 始めから停止させているとズレちゃうので、滑っていることにして停止するところからやる
 		int32                                   m_selected         = 0;
@@ -396,7 +426,7 @@ namespace tomolatoon
 		LerpTransition                          m_toStoppingDiff   = {0.5s, 0.25s, 0.0, 0.0};
 		LerpTransition                          m_toStoppingHeight = {0.1s, 0.1s, m_heightf(), m_maxHeightf(m_heightf())};
 		HashTable<ID, std::unique_ptr<IDrawer>> m_drawablesDic     = {};
-		Array<ID>                               m_drablesRef       = {};
+		Array<ID>                               m_drawableRefs     = {};
 	};
 
 	template <std::invocable<> HeightF, std::invocable<int32> MaxHeightF, std::invocable<> CenterF>

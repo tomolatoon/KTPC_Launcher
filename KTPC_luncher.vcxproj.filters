@@ -828,6 +828,9 @@
     <ClInclude Include="rivet.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Settings.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Siv3DTypes.natvis" />
