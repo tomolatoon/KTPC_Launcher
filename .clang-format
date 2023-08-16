@@ -1,17 +1,19 @@
 BasedOnStyle: WebKit
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
-AlignArrayOfStructures: Left
+AlignArrayOfStructures: Right
 AlignConsecutiveAssignments: AcrossComments
 AlignConsecutiveBitFields: AcrossComments
 AlignConsecutiveDeclarations: AcrossComments
 AlignConsecutiveMacros: AcrossComments
 AlignEscapedNewlines: Left
 AlignOperands: AlignAfterOperator
-AlignTrailingComments: true
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 1
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortEnumsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: InlineOnly
@@ -25,9 +27,28 @@ AttributeMacros: ["WINAPI", "CALLBACK", "__bcount", "__bcount_opt", "__deref_bco
 BinPackArguments: false
 BinPackParameters: false
 BitFieldColonSpacing: Both
+BreakAfterAttributes: Always
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Custom
-BreakBeforeConceptDeclarations: true
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+BreakBeforeConceptDeclarations: Always
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
@@ -55,19 +76,22 @@ IndentPPDirectives: AfterHash
 IndentRequires: false
 IndentWidth: 4
 IndentWrappedFunctionNames: true
+InsertNewlineAtEOF: true
+IntegerLiteralSeparator:
+  Binary: 8
+  Decimal: 3
+  Hex: 2
 KeepEmptyLinesAtTheStartOfBlocks: false
 LambdaBodyIndentation: Signature
 Language: Cpp
 MacroBlockBegin: "^_STD_BEGIN|\
-^TOMOLATOON_MAIN_BEGIN|\
-^BEGIN_TEST_*_ATTRIBUTE"
+^TOMOLATOON_*_BEGIN"
 MacroBlockEnd: "^_STD_END|\
-^TOMOLATOON_MAIN_END|\
-^END_TEST_*_ATTRIBUTE"
+^TOMOLATOON_*_END"
 MaxEmptyLinesToKeep: 3
 NamespaceIndentation: All
 NamespaceMacros: [""]
-PPIndentWidth: -1
+PPIndentWidth: 1
 PackConstructorInitializers: CurrentLine
 PointerAlignment: Left
 ReferenceAlignment: Pointer
@@ -100,36 +124,11 @@ StatementAttributeLikeMacros: ["emit"]
 StatementMacros: ["TEST_DESCRIPTION", "TEST_OWNER", "TEST_PRIORITY", "TEST_WORKITEM", "TEST_IGNORE", "TEST_MODULE_ATTRIBUTE", "BEGIN_TEST_CLASS_ATTRIBUTE", "TEST_METHOD_ATTRIBUTE"]
 TabWidth: 4
 TypenameMacros: []
-UseCRLF: true
 UseTab: AlignWithSpaces
 WhitespaceSensitiveMacros: [""]
-BreakBeforeBraces: Custom
-BraceWrapping:
-  AfterCaseLabel: true
-  AfterClass: true
-  AfterControlStatement: Always
-  AfterEnum: true
-  AfterFunction: true
-  AfterNamespace: true
-  AfterStruct: true
-  AfterUnion: true
-  AfterExternBlock: true
-  BeforeCatch: true
-  BeforeElse: true
-  BeforeLambdaBody: false
-  BeforeWhile: false
-  IndentBraces: false
-  SplitEmptyFunction: false
-  SplitEmptyRecord: false
-  SplitEmptyNamespace: false
-RequiresClausePosition: SingleLine
+RequiresClausePosition: OwnLine
 QualifierAlignment: Custom
-# "friend", 
-QualifierOrder: ["inline", "static", "constexpr", "const", "volatile", "type" ]
+QualifierOrder: ["friend", "inline", "static", "constexpr", "const", "volatile", "type" ]
 SeparateDefinitionBlocks: Always
-AlignArrayOfStructures: Right
-LambdaBodyIndentation: OuterScope
-PPIndentWidth: 1
-BreakBeforeConceptDeclarations: Always
-EmptyLineBeforeAccessModifier: Always
-AllowShortLambdasOnASingleLine: All
+LineEnding: DeriveCRLF
+RequiresExpressionIndentation: Keyword

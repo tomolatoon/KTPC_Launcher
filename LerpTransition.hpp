@@ -4,13 +4,26 @@
 
 namespace tomolatoon
 {
+	using IsRatio = YesNo<struct IsRatioTag>;
 
 	struct LerpTransition
 	{
+		inline static double toRatio(double start, double finish, const Optional<double>& init = none, IsRatio isRatio = IsRatio::No)
+		{
+			if (isRatio)
+			{
+				return init.value_or(0.0);
+			}
+			else
+			{
+				return (finish - start != 0) ? ((init.value_or(start) - start) / (finish - start)) : 0.0;
+			}
+		}
+
 		using self = LerpTransition;
 
-		LerpTransition(const Duration& inDuration, const Duration& outDuration, double start, double finish, Optional<double> init = none)
-			: m_transition(inDuration, outDuration, (finish - start != 0) ? ((init.value_or(start) - start) / (finish - start)) : (0.0))
+		LerpTransition(const Duration& inDuration, const Duration& outDuration, double start, double finish, Optional<double> init = none, IsRatio isRatio = IsRatio::No)
+			: m_transition(inDuration, outDuration, toRatio(start, finish, init, isRatio))
 			, m_start(start)
 			, m_finish(finish)
 			, m_prevTransition(m_transition.value())

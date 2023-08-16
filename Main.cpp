@@ -7,7 +7,7 @@
 #include "Utility.hpp"
 #include "Units.hpp"
 // #include "CurryGenerator.hpp"
-#include "ListDrawer.hpp"
+#include "List.hpp"
 #include "GraphemeView.hpp"
 #include "DataTypes.hpp"
 #include "Load.hpp"
@@ -16,11 +16,11 @@
 
 namespace tomolatoon
 {
-#define USINGS                          \
- using namespace tomolatoon::Units;     \
- using namespace std::placeholders;     \
- using namespace tomolatoon::Operators; \
- using tomolatoon::Iframe, tomolatoon::ScopedIframe2D
+#define USINGS                             \
+	using namespace tomolatoon::Units;     \
+	using namespace std::placeholders;     \
+	using namespace tomolatoon::Operators; \
+	using tomolatoon::Iframe, tomolatoon::ScopedIframe2D
 
 	using App = SceneManager<String, Array<Game>>;
 
@@ -73,7 +73,7 @@ namespace tomolatoon
 			return m_rect;
 		}
 
-		void draw(const Font& font = FontAsset(U"Medium")) const
+		void draw(const Font& font = FontAsset(U"Bold")) const
 		{
 			const auto frame       = Units::vh(0.6);
 			const auto frameBottom = Units::vh(0.8) - frame;
@@ -124,38 +124,42 @@ namespace tomolatoon
 		{
 			USINGS;
 
-			m_drawer.registerDrawableAsArray(true, getData().map([&](const Game& e) {
-				return [&](double per, double stopTime) {
-					//Print << U"{}, {}"_fmt(per, stopTime);
+			for (auto&& e : getData().map([&](const Game& e) {
+					 return [&](double per, double stopTime) {
+						 //Print << U"{}, {}"_fmt(per, stopTime);
 
-					auto if_1 = Iframe::Rect();
-					auto if_2 = Iframe::RectAtScene();
+						 auto if_1 = Iframe::Rect();
+						 auto if_2 = Iframe::RectAtScene();
 
-					// Background
-					//Iframe::Rect().draw(e.background);
-					Iframe::Rect().draw(ColorF{backgroundCardR, backgroundCardG, backgroundCardB, backgroundCardAlpha});
+						 // Background
+						 //Iframe::Rect().draw(e.background);
+						 Iframe::Rect().draw(ColorF{backgroundCardR, backgroundCardG, backgroundCardB, backgroundCardAlpha});
 
-					// Icon
-					e.icon().resized(Iframe::Height() * 0.8).drawAt(10_vw, Iframe::Center().y);
+						 // Icon
+						 e.icon().resized(Iframe::Height() * 0.8).drawAt(10_vw, Iframe::Center().y);
 
-					//
-					//RectF{19_vw, 70_vh, 79.5_vw, 100_vh}.draw(Palette::Lightgrey);
+						 //
+						 //RectF{19_vw, 70_vh, 79.5_vw, 100_vh}.draw(Palette::Lightgrey);
 
-					{
-						ScopedIframe2D iframe{
-							RectF{19_vw, 7.5_vh, 79.5_vw, 65_vh}
-								.draw(Palette::Gray)
-								.stretched(-1_vw, 0)
-								.asRect()
-                        };
+						 {
+							 ScopedIframe2D iframe{
+								 RectF{19_vw, 7.5_vh, 79.5_vw, 65_vh}
+									 .draw(Palette::Gray)
+									 .stretched(-1_vw, 0)
+									 .asRect()
+                             };
 
-						drawSingleline(e.title, per == 1.0 && stopTime > 0.5, vh(titleHeight), 1.5_vw, vh(titleY), -0.5);
-						drawSingleline(e.author, per == 1.0 && stopTime > 0.5, vh(authorHeight), 2.0_vw, vh(authorY), -0.5);
-					}
+							 drawSingleline(e.title, per == 1.0 && stopTime > 0.5, vh(titleHeight), 1.5_vw, vh(titleY), -0.5);
+							 drawSingleline(e.author, per == 1.0 && stopTime > 0.5, vh(authorHeight), 2.0_vw, vh(authorY), -0.5);
+						 }
 
-					//Iframe::Rect().DEBUGDRAW;
-				};
-			}));
+						 //Iframe::Rect().DEBUGDRAW;
+					 };
+				 }))
+			{
+				const auto id = m_context.dic.add(std::move(e));
+				m_context.ary.push_back(id);
+			}
 		}
 
 		/// @brief x軸にどの程度移動した所が文字列の先頭位置かを返す。
@@ -180,7 +184,7 @@ namespace tomolatoon
 				const DrawableText text   = FontAsset(U"Black")(string);
 				const RectF        region = text.region(fontSize, x, y);
 
-				const double xDiff = region.w > Iframe::Width() ? calDiff(m_drawer.stopTime() + stopTimeDiff, additionalHiddenTime, scrollVelocity, region.w, Iframe::Width(), 1) : 0;
+				const double xDiff = region.w > Iframe::Width() ? calDiff(m_context.stoppingTime() + stopTimeDiff, additionalHiddenTime, scrollVelocity, region.w, Iframe::Width(), 1) : 0;
 				text.draw(fontSize, x + xDiff, y);
 			}
 			else
@@ -228,7 +232,7 @@ namespace tomolatoon
 				}
 			};
 
-			const double startX    = enableScrooll && stringAllWidth > widthCapacity ? calDiff(m_drawer.stopTime() + stopTimeDiff, additionalHiddenTime, scrollVelocity, stringAllWidth, width, lines) : 0;
+			const double startX    = enableScrooll && stringAllWidth > widthCapacity ? calDiff(m_context.stoppingTime() + stopTimeDiff, additionalHiddenTime, scrollVelocity, stringAllWidth, width, lines) : 0;
 			const auto   graphemes = string | tomolatoon::views::graphme;
 			auto         it        = std::ranges::begin(graphemes);
 			auto         end       = std::ranges::end(graphemes);
@@ -266,18 +270,21 @@ namespace tomolatoon
 
 		void update() override
 		{
+			ClearPrint();
+
 			USINGS;
 
 			// List
 			{
 				ScopedIframe2D iframe(RectF(sliderStart, 0, 44_sw, 100_sh).asRect());
-				m_drawer.update(RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver());
+				m_context.isMouseIgnore = RectF{0, 90_vh, 100_vw, 100_vh}.mouseOver();
+				m_update.update(m_context);
 			}
 			// ボタンの類
 			{
 				if (m_play.update(RectF{sw(playX), sh(playY), sw(playW), sh(playH)}.asRect()).is_clicked())
 				{
-					if (auto&& target = getData()[m_drawer.selectedDrawableId()].exe; isURL(target))
+					if (auto&& target = getData()[m_context.cur().id().id].exe; isURL(target))
 					{
 						System::LaunchBrowser(target);
 					}
@@ -291,14 +298,13 @@ namespace tomolatoon
 
 		void draw() const override
 		{
-			ClearPrint();
 			//Print << Profiler::GetStat().drawCalls;
 
 			USINGS;
 
-			auto&& prevStoppedSelected = getOpt(m_drawer.prevStoppedSelectedDrawableID(), -1, 0);
+			auto&& prevStoppedSelected = m_context.prev().id().id;
 			auto&& prevStoppedIcon     = getData()[prevStoppedSelected].icon();
-			auto&& selectedIcon        = getData()[m_drawer.selectedDrawableId()].icon();
+			auto&& selectedIcon        = getData()[m_context.cur().id().id].icon();
 
 			// 背景
 			{
@@ -332,7 +338,7 @@ namespace tomolatoon
 			// List
 			{
 				ScopedIframe2D iframe(RectF(sliderStart, 0, 44_sw, 100_sh).asRect());
-				m_drawer.draw();
+				m_draw.draw(m_context);
 			}
 			// icon
 			{
@@ -349,14 +355,14 @@ namespace tomolatoon
 				rect.stretched(vw(1.0), 0).draw(Palette::Lightskyblue);
 
 				ScopedIframe2D iframe(rect);
-				drawMultiline(getData()[prevStoppedSelected].description, (size_t)descriptionLines, m_drawer.isStopped() && m_drawer.stopTime() > 0.5, vh(descriptionFontSize), {0, vh(descriptionDiff)}, -0.5);
+				drawMultiline(getData()[prevStoppedSelected].description, (size_t)descriptionLines, m_context.state == List::Context::State::Stopping && m_context.stoppingTime() > 0.5, vh(descriptionFontSize), {0, vh(descriptionDiff)}, -0.5);
 			}
 			// ボタンの類
 			{
 				m_play.draw();
 			}
 
-#define LISTDRAWER_DEBUG
+//#define LISTDRAWER_DEBUG
 #ifdef LISTDRAWER_DEBUG
 # define EXPAND(macro)                macro()
 # define STRINGIZE(s)                 #s
@@ -407,7 +413,9 @@ namespace tomolatoon
 		}
 
 	private:
-		tomolatoon::ListDrawer<> m_drawer;
+		tomolatoon::List::Context m_context;
+		tomolatoon::List::Update  m_update;
+		tomolatoon::List::Draw    m_draw;
 
 		Button m_play = {
 			RectF{Units::sw(playX), Units::sh(playY), Units::sw(playW), Units::sh(playH)},
@@ -510,7 +518,7 @@ void Main()
 	FontAsset(U"Bold").addFallback(as_clref(FontAsset(U"Emoji")));
 	FontAsset(U"Black").addFallback(as_clref(FontAsset(U"Emoji")));
 
-	Window::Resize(1755, 810, Centering::Yes);
+	Window::Resize(1'755, 810, Centering::Yes);
 	Scene::SetResizeMode(ResizeMode::Actual);
 
 	tomolatoon::App manager;
@@ -519,6 +527,8 @@ void Main()
 
 	while (System::Update())
 	{
+		tomolatoon::Cursor::Update();
+
 		if (not manager.update())
 		{
 			break;

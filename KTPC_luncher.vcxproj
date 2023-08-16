@@ -78,6 +78,7 @@
       <ForcedIncludeFiles>stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <AdditionalIncludeDirectories>$(SolutionDir)\ThirdParty\;$(SolutionDir)\ThirdParty\ICU\include</AdditionalIncludeDirectories>
       <EnablePREfast>true</EnablePREfast>
+      <BuildStlModules>false</BuildStlModules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -107,6 +108,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ForcedIncludeFiles>stdafx.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <AdditionalIncludeDirectories>$(SolutionDir)\ThirdParty\;$(SolutionDir)\ThirdParty\ICU\include</AdditionalIncludeDirectories>
+      <BuildStlModules>false</BuildStlModules>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -332,7 +334,7 @@
     <ClInclude Include="ExpressionFunctor.hpp" />
     <ClInclude Include="GraphemeView.hpp" />
     <ClInclude Include="LerpTransition.hpp" />
-    <ClInclude Include="ListDrawer.hpp" />
+    <ClInclude Include="List.hpp" />
     <ClInclude Include="Load.hpp" />
     <ClInclude Include="rivet.hpp" />
     <ClInclude Include="Settings.hpp" />

@@ -810,7 +810,7 @@
     <ClInclude Include="GraphemeView.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ListDrawer.hpp">
+    <ClInclude Include="List.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Utility.hpp">
